@@ -1,0 +1,121 @@
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orderdb
+    username: orderuser
+    password: orderpass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      pool-name: OrderServicePool
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    jdbc:
+      repositories:
+        enabled: true
+
+  jms:
+    pub-sub-domain: true   # convertAndSend(topic, message) publishes to a Solace Topic (not a Queue); the manually-built listener container factories in JmsConsumerConfig are unaffected and stay Queue-mode for consuming
+
+solace:
+  jms:
+    host: ${SOLACE_JMS_HOST:smf://localhost:55555}
+    msg-vpn: ${SOLACE_JMS_MSG_VPN:default}
+    client-username: ${SOLACE_JMS_CLIENT_USERNAME:default}
+    client-password: ${SOLACE_JMS_CLIENT_PASSWORD:default}
+
+# ─── Downstream service URLs ───────────────────────────────────────────
+# These are resolved via Docker Compose service names in containers,
+# or localhost URLs for local development.
+services:
+  inventory:
+    url: http://localhost:8081
+  payment:
+    url: http://localhost:8082
+  shipping:
+    url: http://localhost:8083
+
+# ─── Temporal ──────────────────────────────────────────────────────────
+temporal:
+  service-address: localhost:7233
+  namespace: default
+  connection:
+    target: ${temporal.service-address}
+  workers-auto-discovery:
+    packages:
+      - com.example.ordermanagement.infrastructure.temporal
+
+# ─── Resilience4j Circuit Breakers ────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 5s
+        slow-call-rate-threshold: 80
+        ignore-exceptions:
+          - com.example.ordermanagement.infrastructure.temporal.activity.InsufficientFundsException
+          - com.example.ordermanagement.infrastructure.temporal.activity.CardDeclinedException
+          - org.springframework.web.client.HttpClientErrorException.UnprocessableEntity
+    instances:
+      inventory-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      shipping-service:
+        base-config: default
+
+# ─── Simulation (kept for integration testing with real services) ───────
+simulation:
+  inventory-failure-rate: 0.0   # Failure controlled by inventory-service
+  payment-failure-rate: 0.0     # Failure controlled by payment-service
+  shipping-failure-rate: 0.0    # Failure controlled by shipping-service
+  step-delay-ms: 0              # Delay before each saga step. Set to 5000 to create a cancel window.
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    com.example.ordermanagement: DEBUG
+    io.temporal: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+  api-docs:
+    path: /v3/api-docs

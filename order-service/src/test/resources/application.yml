@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    # Overridden by @DynamicPropertySource in Testcontainers tests
+    url: jdbc:postgresql://localhost:5432/orderdb_test
+    username: test
+    password: test
+  flyway:
+    enabled: false  # Managed per test class via Testcontainers
+  data:
+    jdbc:
+      repositories:
+        enabled: true
+
+temporal:
+  service-address: localhost:7233
+  namespace: default
+
+simulation:
+  inventory-failure-rate: 0.0
+  payment-failure-rate: 0.0
+  shipping-failure-rate: 0.0
+
+logging:
+  level:
+    com.example.ordermanagement: WARN
+    io.temporal: WARN

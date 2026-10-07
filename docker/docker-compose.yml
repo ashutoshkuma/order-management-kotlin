@@ -1,0 +1,520 @@
+# ════════════════════════════════════════════════════════════════════════
+# Order Management — Full Stack
+# Run from project root:  docker compose -f docker/docker-compose.yml up -d
+# ════════════════════════════════════════════════════════════════════════
+
+networks:
+  order-net:
+    driver: bridge
+
+volumes:
+  postgres-order-data:
+  postgres-temporal-data:
+  postgres-inventory-data:
+  postgres-payment-data:
+  postgres-shipping-data:
+  postgres-kong-data:
+  pgadmin-data:
+  solace-data:
+  prometheus-data:
+  grafana-data:
+
+services:
+
+  # ──────────────────────────────────────────────
+  # DATABASES
+  # ──────────────────────────────────────────────
+
+  postgres-order:
+    image: postgres:16-alpine
+    container_name: postgres-order
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: orderuser
+      POSTGRES_PASSWORD: orderpass
+    ports: ["5432:5432"]
+    volumes: [postgres-order-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderuser -d orderdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-inventory:
+    image: postgres:16-alpine
+    container_name: postgres-inventory
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: inventoryuser
+      POSTGRES_PASSWORD: inventorypass
+    ports: ["5434:5432"]
+    volumes: [postgres-inventory-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventoryuser -d inventorydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-payment:
+    image: postgres:16-alpine
+    container_name: postgres-payment
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: paymentuser
+      POSTGRES_PASSWORD: paymentpass
+    ports: ["5435:5432"]
+    volumes: [postgres-payment-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paymentuser -d paymentdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-shipping:
+    image: postgres:16-alpine
+    container_name: postgres-shipping
+    environment:
+      POSTGRES_DB: shippingdb
+      POSTGRES_USER: shippinguser
+      POSTGRES_PASSWORD: shippingpass
+    ports: ["5436:5432"]
+    volumes: [postgres-shipping-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shippinguser -d shippingdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-temporal:
+    image: postgres:16-alpine
+    container_name: postgres-temporal
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    ports: ["5433:5432"]
+    volumes: [postgres-temporal-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports: ["5050:80"]
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgpassfile:ro
+    networks: [order-net]
+    depends_on:
+      - postgres-order
+      - postgres-inventory
+      - postgres-payment
+      - postgres-shipping
+      - postgres-temporal
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # SOLACE PUBSUB+ (Standard edition — single-node broker)
+  # PubSub+ Manager UI (SEMP): http://localhost:8085  (admin/admin)
+  # Ships with a pre-provisioned "default" message-vpn and a
+  # "default"/"default" client username, enabled out of the box.
+  # ──────────────────────────────────────────────
+
+  solace:
+    image: solace/solace-pubsub-standard:latest
+    container_name: solace
+    shm_size: 2g
+    ulimits:
+      nofile:
+        soft: 2448
+        hard: 1048576
+    environment:
+      username_admin_globalaccesslevel: admin
+      username_admin_password: admin
+    volumes:
+      - solace-data:/var/lib/solace
+    ports:
+      - "8085:8080"     # SEMP v2 REST API + PubSub+ Manager UI (8080 is already claimed by order-service)
+      - "55556:55555"   # SMF — host port remapped, 55555 was already claimed on this host; container-internal port (used by all other services over the Docker network) stays 55555
+      - "8008:8008"     # Web/REST messaging
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s -u admin:admin http://localhost:8080/SEMP/v2/monitor/about/api > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ──────────────────────────────────────────────
+  # TEMPORAL
+  # ──────────────────────────────────────────────
+
+  temporal:
+    image: temporalio/auto-setup:1.22.3
+    container_name: temporal-server
+    depends_on:
+      postgres-temporal:
+        condition: service_healthy
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres-temporal
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=false
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    ports: ["7233:7233"]
+    networks: [order-net]
+
+  temporal-ui:
+    image: temporalio/ui:2.26.2
+    container_name: temporal-ui
+    depends_on: [temporal]
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports: ["8088:8080"]
+    networks: [order-net]
+
+  # ──────────────────────────────────────────────
+  # MICROSERVICES  (pre-built JARs via Dockerfile)
+  # Build first:  mvn clean package -DskipTests
+  # ──────────────────────────────────────────────
+
+  inventory-service:
+    build:
+      context: ../inventory-service
+      dockerfile: Dockerfile
+    image: inventory-service:latest
+    container_name: inventory-service
+    depends_on:
+      postgres-inventory:
+        condition: service_healthy
+      solace:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-inventory:5432/inventorydb
+      SPRING_DATASOURCE_USERNAME: inventoryuser
+      SPRING_DATASOURCE_PASSWORD: inventorypass
+      SOLACE_JMS_HOST: smf://solace:55555
+      SOLACE_JMS_MSG_VPN: default
+      SOLACE_JMS_CLIENT_USERNAME: default
+      SOLACE_JMS_CLIENT_PASSWORD: default
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      SIMULATION_INVENTORY_FAILURE_RATE: "0.10"
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports: ["8081:8081"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  payment-service:
+    build:
+      context: ../payment-service
+      dockerfile: Dockerfile
+    image: payment-service:latest
+    container_name: payment-service
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      solace:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/paymentdb
+      SPRING_DATASOURCE_USERNAME: paymentuser
+      SPRING_DATASOURCE_PASSWORD: paymentpass
+      SOLACE_JMS_HOST: smf://solace:55555
+      SOLACE_JMS_MSG_VPN: default
+      SOLACE_JMS_CLIENT_USERNAME: default
+      SOLACE_JMS_CLIENT_PASSWORD: default
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      SIMULATION_PAYMENT_FAILURE_RATE: "0.00"
+      SIMULATION_PAYMENT_TRANSIENT_RATIO: "0.30"
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports: ["8082:8082"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  shipping-service:
+    build:
+      context: ../shipping-service
+      dockerfile: Dockerfile
+    image: shipping-service:latest
+    container_name: shipping-service
+    depends_on:
+      postgres-shipping:
+        condition: service_healthy
+      solace:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shipping:5432/shippingdb
+      SPRING_DATASOURCE_USERNAME: shippinguser
+      SPRING_DATASOURCE_PASSWORD: shippingpass
+      SOLACE_JMS_HOST: smf://solace:55555
+      SOLACE_JMS_MSG_VPN: default
+      SOLACE_JMS_CLIENT_USERNAME: default
+      SOLACE_JMS_CLIENT_PASSWORD: default
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      SIMULATION_SHIPPING_FAILURE_RATE: "0.10"
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports: ["8083:8083"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    command: redis-server --save "" --appendonly no
+    ports: ["6379:6379"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  notification-service:
+    build:
+      context: ../notification-service
+      dockerfile: Dockerfile
+    image: notification-service:latest
+    container_name: notification-service
+    depends_on:
+      solace:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SOLACE_JMS_HOST: smf://solace:55555
+      SOLACE_JMS_MSG_VPN: default
+      SOLACE_JMS_CLIENT_USERNAME: default
+      SOLACE_JMS_CLIENT_PASSWORD: default
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports: ["8084:8084"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  order-service:
+    build:
+      context: ../order-service
+      dockerfile: Dockerfile
+    image: order-service:latest
+    container_name: order-service
+    depends_on:
+      postgres-order:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      solace:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      shipping-service:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/orderdb
+      SPRING_DATASOURCE_USERNAME: orderuser
+      SPRING_DATASOURCE_PASSWORD: orderpass
+      SOLACE_JMS_HOST: smf://solace:55555
+      SOLACE_JMS_MSG_VPN: default
+      SOLACE_JMS_CLIENT_USERNAME: default
+      SOLACE_JMS_CLIENT_PASSWORD: default
+      TEMPORAL_SERVICE_ADDRESS: temporal:7233
+      SERVICES_INVENTORY_URL: http://inventory-service:8081
+      SERVICES_PAYMENT_URL: http://payment-service:8082
+      SERVICES_SHIPPING_URL: http://shipping-service:8083
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      SIMULATION_STEP_DELAY_MS: 10000   # Set >0 to slow saga steps and test cancel/durable-execution
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+    ports: ["8080:8080"]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  # ──────────────────────────────────────────────
+  # KONG API GATEWAY
+  # ──────────────────────────────────────────────
+
+  postgres-kong:
+    image: postgres:16-alpine
+    container_name: postgres-kong
+    environment:
+      POSTGRES_DB: kongdb
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong
+    volumes: [postgres-kong-data:/var/lib/postgresql/data]
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong -d kongdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kong-migration:
+    image: kong:3.6-ubuntu
+    container_name: kong-migration
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres-kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kongdb
+    depends_on:
+      postgres-kong:
+        condition: service_healthy
+    networks: [order-net]
+    restart: on-failure
+
+  kong:
+    image: kong:3.6-ubuntu
+    container_name: kong
+    depends_on:
+      postgres-kong:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres-kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kongdb
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_LISTEN: 0.0.0.0:8002
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+      KONG_PLUGINS: bundled
+    ports:
+      - "8100:8000"   # Kong proxy — client entry point (host port remapped; another unrelated project on this host already holds 8000)
+      - "8001:8001"   # Kong Admin API
+      - "8002:8002"   # Kong Manager UI
+    networks: [order-net]
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  kong-init:
+    image: curlimages/curl:8.7.1
+    container_name: kong-init
+    depends_on:
+      kong:
+        condition: service_healthy
+    volumes:
+      - ./kong-init.sh:/kong-init.sh:ro
+    command: ["/bin/sh", "/kong-init.sh"]
+    networks: [order-net]
+    restart: on-failure
+
+  # ──────────────────────────────────────────────
+  # OBSERVABILITY
+  # ──────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    ports: ["9090:9090"]
+    networks: [order-net]
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports: ["3000:3000"]
+    networks: [order-net]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
+    networks: [order-net]
+
+  # Centralized Swagger UI to view and interact with all APIs
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: swagger-ui
+    environment:
+      API_URLS: "[
+        {url: 'http://localhost:8080/v3/api-docs', name: 'Order Service (Direct)'},
+        {url: 'http://localhost:8081/v3/api-docs', name: 'Inventory Service (Direct)'},
+        {url: 'http://localhost:8082/v3/api-docs', name: 'Payment Service (Direct)'},
+        {url: 'http://localhost:8083/v3/api-docs', name: 'Shipping Service (Direct)'},
+        {url: 'http://localhost:8084/v3/api-docs', name: 'Notification Service (Direct)'},
+        {url: 'http://localhost:8000/order-service/v3/api-docs', name: 'Order Service (Gateway)'},
+        {url: 'http://localhost:8000/inventory-service/v3/api-docs', name: 'Inventory Service (Gateway)'},
+        {url: 'http://localhost:8000/payment-service/v3/api-docs', name: 'Payment Service (Gateway)'},
+        {url: 'http://localhost:8000/shipping-service/v3/api-docs', name: 'Shipping Service (Gateway)'},
+        {url: 'http://localhost:8000/notification-service/v3/api-docs', name: 'Notification Service (Gateway)'}
+      ]"
+    ports:
+      - "8089:8080"
+    networks: [order-net]

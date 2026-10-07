@@ -1,0 +1,42 @@
+# Maven build output
+**/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
+
+# Claude Code local settings (machine-specific)
+.claude/
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (if mounted locally)
+docker/data/
+docker/postgres-data/
+
+# Environment / secrets
+.env
+.env.local
+*.env
+
+# Spring Boot
+spring-shell.log
+
+# Editor
+*.swp
+*.swo
+*~

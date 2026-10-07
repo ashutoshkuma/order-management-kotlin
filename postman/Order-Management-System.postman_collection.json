@@ -1,0 +1,799 @@
+{
+  "info": {
+    "name": "Order Management System",
+    "description": "Complete API collection for the Order Management System.\n\nArchitecture: Temporal Workflows + Event Sourcing + Hexagonal Architecture\n\n## Quick Start\n1. Import this collection\n2. Run 'Happy Path' folder in sequence\n\n## Ports\n- Order Service:      http://localhost:8080\n- Inventory Service:  http://localhost:8081\n- Payment Service:    http://localhost:8082\n- Shipping Service:   http://localhost:8083\n- Kong Gateway:       http://localhost:8000\n\n## UIs\n- Swagger:  http://localhost:8080/swagger-ui.html\n- Temporal: http://localhost:8088\n- Kafka UI: http://localhost:9000\n- Jaeger:   http://localhost:16686\n\n## Seeded Products (use these UUIDs for productId)\n- a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11  Laptop Pro 15in        ($1,199.99)\n- a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12  Wireless Mouse         ($59.99)\n- a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13  USB-C Hub              ($49.99)\n- a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14  Mechanical Keyboard    ($199.99)\n- a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15  Monitor 27in           ($799.99)\n\n## Simulated Failure Rates\n- Inventory: 20% (configured in inventory-service application.yml)\n- Payment:   30% (configured in payment-service application.yml)\n- Shipping:  10% (configured in shipping-service application.yml)\nTemporal retries handle transient failures automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "order_service",     "value": "http://localhost:8080" },
+    { "key": "inventory_service", "value": "http://localhost:8081" },
+    { "key": "payment_service",   "value": "http://localhost:8082" },
+    { "key": "shipping_service",  "value": "http://localhost:8083" },
+    { "key": "kong_gateway",      "value": "http://localhost:8000" },
+    { "key": "order_id",          "value": "" },
+    { "key": "workflow_id",       "value": "" },
+    { "key": "reservation_id",    "value": "" },
+    { "key": "transaction_id",    "value": "" },
+    { "key": "shipment_id",       "value": "" },
+    { "key": "product_id",        "value": "PROD-001" }
+  ],
+  "item": [
+
+    {
+      "name": "🚀 Happy Path (Run in Sequence)",
+      "description": "Full order lifecycle: Create → Add Items → Confirm → Watch workflow complete.\n\nItems added: 1× Mechanical Keyboard + 2× USB-C Hub = $299.97 total.\nThe Temporal saga runs: Reserve Inventory → Process Payment → Create Shipment → Confirm Delivery.\nPayment has a 30% simulated failure rate — Temporal retries automatically (maxAttempts=3).",
+      "item": [
+        {
+          "name": "1. Create Order",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.collectionVariables.set('order_id', json.orderId);",
+            "pm.collectionVariables.set('workflow_id', 'order-fulfillment-' + json.orderId);",
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('orderId present', () => pm.expect(json.orderId).to.be.a('string'));",
+            "console.log('Order ID saved:', json.orderId);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"shippingAddress\": \"123 Main Street, San Francisco, CA 94102\"\n}" },
+            "description": "Creates an order in DRAFT status. Raises OrderCreatedEvent (v1)."
+          }
+        },
+        {
+          "name": "2. Add Item - Mechanical Keyboard",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14\",\n  \"productName\": \"Mechanical Keyboard\",\n  \"quantity\": 1,\n  \"unitPrice\": \"199.99\"\n}" },
+            "description": "Raises ItemAddedEvent (v2). Only valid in DRAFT status.\nproductId must match a seeded inventory_items row — inventory-service validates on reserve."
+          }
+        },
+        {
+          "name": "3. Add Item - USB-C Hub (qty 2)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13\",\n  \"productName\": \"USB-C Hub\",\n  \"quantity\": 2,\n  \"unitPrice\": \"49.99\"\n}" }
+          }
+        },
+        {
+          "name": "4. Get Order (DRAFT state)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status is DRAFT', () => pm.expect(json.status).to.eql('DRAFT'));",
+            "pm.test('Has 2 items', () => pm.expect(json.items.length).to.eql(2));",
+            "console.log('Total:', json.totalAmount, '| Items:', json.items.length);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}",
+            "description": "State is rebuilt by replaying events from the event store — no direct state read."
+          }
+        },
+        {
+          "name": "5. Confirm Order (starts Temporal workflow)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 202', () => pm.response.to.have.status(202));",
+            "pm.test('workflowId returned', () => pm.expect(json.workflowId).to.include('order-fulfillment'));",
+            "pm.collectionVariables.set('workflow_id', json.workflowId);",
+            "console.log('Workflow started:', json.workflowId);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/orders/{{order_id}}/confirm",
+            "description": "Transitions DRAFT → CONFIRMED and launches Temporal saga:\nReserve Inventory → Process Payment → Create Shipment → Confirm Delivery\n\nReturns 202 immediately; poll GET /orders/{id} to watch progress."
+          }
+        },
+        {
+          "name": "6. Poll Order Status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Order status:', json.status, '| Payment:', json.paymentStatus, '| Shipment:', json.shipmentStatus, '| Tracking:', json.trackingNumber);",
+            "if (json.trackingNumber) pm.collectionVariables.set('tracking_number', json.trackingNumber);",
+            "if (json.shipmentId) pm.collectionVariables.set('shipment_id', json.shipmentId);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}",
+            "description": "Run repeatedly to watch saga progress: CONFIRMED → SHIPPED → DELIVERED.\nPayment retries happen automatically inside Temporal (30% failure rate, maxAttempts=3)."
+          }
+        },
+        {
+          "name": "7. Get Event Timeline",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has events', () => pm.expect(json.length).to.be.above(0));",
+            "json.forEach(e => console.log('v' + e.version + ' [' + e.eventType + '] ' + e.description));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}/timeline",
+            "description": "Human-readable event history. Shows every state transition with timestamp."
+          }
+        },
+        {
+          "name": "8. Get Event History (raw events)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has events', () => pm.expect(json.length).to.be.above(0));",
+            "console.log('Event count:', json.length);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}/history",
+            "description": "Returns raw domain event records from the event_store table."
+          }
+        },
+        {
+          "name": "9. Get Workflow Status (Temporal query)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Workflow:', json.status, '| Step:', json.currentStep, '| Retries:', json.retryCount);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/workflows/{{workflow_id}}",
+            "description": "Reads LIVE in-memory workflow state via Temporal Query — no DB hit, no event replay.\nReturns UNKNOWN once the workflow completes (Temporal no longer holds it in memory)."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "❌ Saga Compensation (Cancel Flow)",
+      "description": "Demonstrates saga rollback. Create → Add Item → Confirm → Cancel.\nWatch compensation: InventoryReleased → (RefundPayment if charged) → OrderCancelled.",
+      "item": [
+        {
+          "name": "1. Create Order for Cancel Test",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.collectionVariables.set('order_id', json.orderId);",
+            "pm.collectionVariables.set('workflow_id', 'order-fulfillment-' + json.orderId);",
+            "console.log('Cancel-test order:', json.orderId);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"shippingAddress\": \"456 Oak Ave, New York NY 10001\"\n}" }
+          }
+        },
+        {
+          "name": "2. Add Item - Laptop Pro 15in",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11\",\n  \"productName\": \"Laptop Pro 15in\",\n  \"quantity\": 1,\n  \"unitPrice\": \"1199.99\"\n}" }
+          }
+        },
+        {
+          "name": "3. Confirm Order",
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/orders/{{order_id}}/confirm"
+          }
+        },
+        {
+          "name": "4. Cancel Order (triggers compensation)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Cancel sent. Check timeline to see compensation events.');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer changed their mind\"\n}" },
+            "description": "Sends CancelOrder signal to Temporal. Compensation: ReleaseInventory → (RefundPayment if charged) → OrderCancelled."
+          }
+        },
+        {
+          "name": "5. Check Timeline (see compensation events)",
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}/timeline",
+            "description": "Should show InventoryReleasedEvent and OrderCancelledEvent."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔄 Order Service — All Endpoints",
+      "description": "Individual requests for every Order and Workflow controller endpoint.",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"shippingAddress\": \"789 Pine Rd, Seattle, WA 98101\"\n}" }
+          }
+        },
+        {
+          "name": "Add Item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12\",\n  \"productName\": \"Wireless Mouse\",\n  \"quantity\": 1,\n  \"unitPrice\": \"59.99\"\n}" }
+          }
+        },
+        {
+          "name": "Remove Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{order_service}}/orders/{{order_id}}/items/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12",
+            "description": "Removes item from order. Only valid in DRAFT status. Raises ItemRemovedEvent.\nproductId in the path must match an item already added to the order."
+          }
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/orders/{{order_id}}/confirm",
+            "description": "Transitions DRAFT → CONFIRMED. Starts Temporal fulfillment workflow. Returns 202 with workflowId."
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Out of stock\"\n}" },
+            "description": "Sends cancel signal to Temporal workflow or directly cancels a DRAFT order."
+          }
+        },
+        {
+          "name": "Record Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/payment",
+            "body": { "mode": "raw", "raw": "{\n  \"transactionId\": \"txn-manual-001\",\n  \"amount\": \"199.99\",\n  \"paymentMethod\": \"CARD\"\n}" },
+            "description": "Records a payment event on the order. Called by the payment activity in the workflow."
+          }
+        },
+        {
+          "name": "Retry Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/orders/{{order_id}}/retry-payment",
+            "description": "Sends RetryPayment signal to the Temporal workflow. Returns 202."
+          }
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}",
+            "description": "Returns current order state reconstructed from event replay."
+          }
+        },
+        {
+          "name": "Get Order History (raw events)",
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}/history",
+            "description": "Returns raw domain event records from the event_store table."
+          }
+        },
+        {
+          "name": "Get Order Timeline",
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}/timeline",
+            "description": "Human-readable event history with descriptions and timestamps."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚙️ Workflow Controller",
+      "description": "Direct Temporal workflow interaction. workflowId format: order-fulfillment-{orderId}\n\nNOTE: These endpoints are NOT routed through Kong — call order-service directly on port 8080.\n\nworkflowId is returned by POST /orders/{id}/confirm and auto-saved into the {{workflow_id}} variable.",
+      "item": [
+        {
+          "name": "Get Workflow Status (Temporal query)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Status:', json.status, '| Step:', json.currentStep, '| Retries:', json.retryCount, '| CancelRequested:', json.cancellationRequested);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/workflows/{{workflow_id}}",
+            "description": "Reads live in-memory workflow state via Temporal Query — no DB hit, no event replay.\n\nPossible currentStep values:\n- RESERVING_INVENTORY  — inside reserveInventory activity (10s simulated delay)\n- PAYMENT_PENDING      — 10s cancel window BEFORE payment is scheduled. Send cancel here to prevent any charge.\n- PROCESSING_PAYMENT   — inside processPayment activity (10s simulated delay)\n- WAITING_FOR_PAYMENT_RETRY — paused up to 5 min waiting for RetryPayment signal\n- SHIPMENT_PENDING     — 10s cancel window BEFORE shipment is scheduled. Send cancel here; payment will be refunded.\n- CREATING_SHIPMENT    — inside createShipment activity\n- AWAITING_DELIVERY    — waiting for delivery confirmation\n- COMPLETED            — saga finished successfully\n- CANCELLED            — order cancelled (compensation completed)\n- PAYMENT_FAILED       — payment exhausted all retries, saga compensated\n- INVENTORY_FAILED     — inventory unavailable, order cancelled\n\nReturns UNKNOWN status if workflow has already completed (Temporal releases in-memory state on completion)."
+          }
+        },
+        {
+          "name": "Send Cancel Signal (direct to workflow)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202', () => pm.response.to.have.status(202));",
+            "var json = pm.response.json();",
+            "console.log(json.message, '| workflowId:', json.workflowId);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/workflows/{{workflow_id}}/signal/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}" },
+            "description": "Sends a CancelOrder signal directly to the Temporal workflow, bypassing domain validation.\n\nDifference from POST /orders/{id}/cancel:\n- POST /orders/{id}/cancel   — goes through the Order aggregate (validates state, may reject)\n- POST /workflows/{id}/signal/cancel — sends signal straight to Temporal (ops use, always delivered)\n\nThe signal is queued and processed at the next cancel checkpoint:\n- During PAYMENT_PENDING (10s window)  → inventory released, payment NEVER charged\n- During PROCESSING_PAYMENT activity   → payment completes, then refunded by compensation\n- During SHIPMENT_PENDING (10s window) → payment refunded, shipment NEVER created\n\nSignal is silently ignored if the workflow has already completed."
+          }
+        },
+        {
+          "name": "Send Retry Payment Signal",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202', () => pm.response.to.have.status(202));",
+            "var json = pm.response.json();",
+            "console.log(json.message);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/workflows/{{workflow_id}}/signal/retry-payment",
+            "description": "Wakes a workflow paused at WAITING_FOR_PAYMENT_RETRY state.\n\nAfter a transient payment failure (network timeout, not InsufficientFunds), the workflow calls:\n  Workflow.await(5 minutes, () -> retryRequested)\nand waits up to 5 minutes for this signal instead of immediately compensating.\n\nThis signal sets retryRequested=true, causing the workflow to re-attempt processPayment.\nHas no effect if the workflow is not in WAITING_FOR_PAYMENT_RETRY state.\n\nIf the 5-minute window expires without this signal, the workflow auto-cancels: ReleaseInventory → OrderCancelled."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📦 Inventory Service (Direct)",
+      "description": "Inventory CRUD management + saga reservation endpoints.\n\nCRUD endpoints let you manage the product catalogue at runtime.\nReservation endpoints are called by order-service InventoryActivity during the Temporal saga.\n\nSeeded products (UUID keys, use for order items):\n- a0eebc99-...-a11  Laptop Pro 15in\n- a0eebc99-...-a12  Wireless Mouse\n- a0eebc99-...-a13  USB-C Hub\n- a0eebc99-...-a14  Mechanical Keyboard\n- a0eebc99-...-a15  Monitor 27in",
+      "item": [
+        {
+          "name": "List All Inventory Items",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(json).to.be.an('array'));",
+            "pm.test('Has items', () => pm.expect(json.length).to.be.above(0));",
+            "console.log('Total products:', json.length);",
+            "json.forEach(p => console.log(p.productId, '|', p.productName, '| available:', p.quantityAvailable, '| reserved:', p.quantityReserved));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{inventory_service}}/inventory",
+            "description": "Returns all products with current stock levels (quantityAvailable + quantityReserved).\nquantityReserved reflects active Temporal saga reservations."
+          }
+        },
+        {
+          "name": "Get Inventory Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var json = pm.response.json();",
+            "console.log(json.productId, '|', json.productName, '| available:', json.quantityAvailable);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{inventory_service}}/inventory/{{product_id}}",
+            "description": "Get a single product by productId. Returns 404 if not found.\nDefault product_id variable is PROD-001 (Laptop Pro 15\")."
+          }
+        },
+        {
+          "name": "Create Inventory Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "var json = pm.response.json();",
+            "pm.collectionVariables.set('product_id', json.productId);",
+            "console.log('Created:', json.productId, '|', json.productName, '| qty:', json.quantityAvailable);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_service}}/inventory",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"PROD-NEW-001\",\n  \"productName\": \"Standing Desk\",\n  \"quantityAvailable\": 50\n}" },
+            "description": "Creates a new product in the inventory catalogue.\n\nproductId: any unique string (PROD-xxx or UUID — use UUID format if you want order-service to reserve it via Temporal).\nquantityAvailable: initial stock (must be >= 0).\nquantityReserved starts at 0.\n\nReturns 409 Conflict if productId already exists."
+          }
+        },
+        {
+          "name": "Update Inventory Item (restock)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var json = pm.response.json();",
+            "console.log('Updated:', json.productName, '| available:', json.quantityAvailable, '| reserved:', json.quantityReserved);"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_service}}/inventory/{{product_id}}",
+            "body": { "mode": "raw", "raw": "{\n  \"quantityAvailable\": 200\n}" },
+            "description": "Partial update — only include fields you want to change.\n\nquantityAvailable: set new stock level (null = keep existing).\nproductName: rename the product (null = keep existing).\nquantityReserved is managed by the saga and cannot be set here.\n\nReturns 404 if productId not found."
+          }
+        },
+        {
+          "name": "Update Inventory Item (rename)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var json = pm.response.json();",
+            "console.log('Renamed to:', json.productName);"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_service}}/inventory/{{product_id}}",
+            "body": { "mode": "raw", "raw": "{\n  \"productName\": \"Adjustable Standing Desk Pro\"\n}" },
+            "description": "Rename only — quantityAvailable is omitted so it stays unchanged."
+          }
+        },
+        {
+          "name": "Delete Inventory Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));",
+            "console.log('Deleted product:', pm.collectionVariables.get('product_id'));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{inventory_service}}/inventory/{{product_id}}",
+            "description": "Permanently deletes a product from the catalogue.\nDo not delete products that have active reservations — the release compensation will fail.\nReturns 204 No Content on success, 404 if not found."
+          }
+        },
+        {
+          "name": "Reserve Inventory",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "if (json.reservationId) pm.collectionVariables.set('reservation_id', json.reservationId);",
+            "console.log('Reservation:', json.reservationId, '| Status:', json.status);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{inventory_service}}/reserve",
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"items\": [\n    {\n      \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14\",\n      \"quantity\": 1\n    }\n  ]\n}" },
+            "description": "Idempotent: same orderId always returns the same reservationId.\n20% simulated failure rate — retried automatically by Temporal InventoryActivity."
+          }
+        },
+        {
+          "name": "Release Inventory (Saga Compensation)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{inventory_service}}/reserve/{{reservation_id}}",
+            "description": "Releases a reservation. Saga compensation step called by releaseInventory activity."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💳 Payment Service (Direct)",
+      "description": "Internal endpoints — called by order-service PaymentActivity during the Temporal saga.\nBypasses Kong. Useful for manual debugging or simulating partial saga state.",
+      "item": [
+        {
+          "name": "Charge Payment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "if (json.transactionId) pm.collectionVariables.set('transaction_id', json.transactionId);",
+            "console.log('Transaction:', json.transactionId, '| Status:', json.status);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{payment_service}}/charge",
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"amount\": \"199.99\",\n  \"currency\": \"USD\",\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\"\n}" },
+            "description": "Idempotent: same orderId always returns same result.\n30% simulated failure rate — retried automatically by Temporal PaymentActivity."
+          }
+        },
+        {
+          "name": "Refund Payment (Saga Compensation)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{payment_service}}/refund",
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"transactionId\": \"{{transaction_id}}\",\n  \"reason\": \"Order cancelled\"\n}" },
+            "description": "Refunds a charge. Saga compensation step called by refundPayment activity."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🚚 Shipping Service (Direct)",
+      "description": "Internal endpoints — called by order-service ShippingActivity during the Temporal saga.\nBypasses Kong. Useful for manual debugging or simulating partial saga state.",
+      "item": [
+        {
+          "name": "Create Shipment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "if (json.shipmentId) pm.collectionVariables.set('shipment_id', json.shipmentId);",
+            "console.log('Shipment:', json.shipmentId, '| Carrier:', json.carrier, '| Tracking:', json.trackingNumber);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{shipping_service}}/shipments",
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"shippingAddress\": \"123 Main Street, San Francisco, CA 94102\",\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\"\n}" },
+            "description": "Idempotent: same orderId returns same shipmentId.\n10% simulated failure rate — retried automatically by Temporal ShippingActivity."
+          }
+        },
+        {
+          "name": "Confirm Delivery (simulate carrier webhook)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Delivery confirmed for shipment:', pm.collectionVariables.get('shipment_id'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{shipping_service}}/deliveries/{{shipment_id}}/confirm",
+            "description": "Simulates carrier webhook confirming delivery. Sets shipment status to DELIVERED.\nshipment_id is set automatically by the 'Create Shipment' test script above."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔥 Failure Scenarios",
+      "description": "Test saga compensation paths and cancel windows.\n\nScenario A — Cancel Before Payment: cancel during PAYMENT_PENDING window → no charge ever made.\nScenario B — Payment failure + retry signal: transient failure, customer retries payment.\nScenario C — Force payment failure: set failure rate to 100%, all retries fail, saga compensates.\nScenario D — Cancel mid-flight: cancel arrives while payment/shipment activity is running → refund issued.",
+      "item": [
+        {
+          "name": "A1. Create Order (Cancel-Before-Payment test)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.collectionVariables.set('order_id', json.orderId);",
+            "pm.collectionVariables.set('workflow_id', 'order-fulfillment-' + json.orderId);",
+            "console.log('Order for cancel-before-payment test:', json.orderId);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"shippingAddress\": \"1 Cancel Street, Test City\"\n}" }
+          }
+        },
+        {
+          "name": "A2. Add Item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14\",\n  \"productName\": \"Mechanical Keyboard\",\n  \"quantity\": 1,\n  \"unitPrice\": \"199.99\"\n}" }
+          }
+        },
+        {
+          "name": "A3. Confirm Order (workflow starts)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.collectionVariables.set('workflow_id', json.workflowId);",
+            "console.log('Workflow started:', json.workflowId);",
+            "console.log('Now poll A4 until currentStep=PAYMENT_PENDING, then immediately send A5 cancel.');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/orders/{{order_id}}/confirm",
+            "description": "Starts the Temporal saga. The workflow will:\n1. awaitCancelWindow(10s) — pre-inventory cancel window\n2. Run reserveInventory (~10s)\n3. Enter PAYMENT_PENDING — 10s cancel window before payment\n\nAfter running this request, poll A4 every second until currentStep=PAYMENT_PENDING.\nYou have 10 seconds to send A5 before payment is scheduled."
+          }
+        },
+        {
+          "name": "A4. Poll Workflow (wait for PAYMENT_PENDING)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "console.log('Step:', json.currentStep, '| CancelRequested:', json.cancellationRequested);",
+            "if (json.currentStep === 'PAYMENT_PENDING') {",
+            "  console.log('>>> PAYMENT_PENDING window is OPEN. Run A5 cancel NOW (you have 10 seconds).');",
+            "} else if (json.currentStep === 'PROCESSING_PAYMENT') {",
+            "  console.log('>>> Missed the window. Payment is running. Cancel will trigger refund (Scenario D).');",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/workflows/{{workflow_id}}",
+            "description": "Run this repeatedly (every ~1s) after A3 confirm.\nWhen currentStep=PAYMENT_PENDING the 10-second cancel window is open.\nSend A5 immediately — the window closes 10 seconds after PAYMENT_PENDING appears.\n\nExpected sequence: RESERVING_INVENTORY (20s) → PAYMENT_PENDING (10s window) → PROCESSING_PAYMENT"
+          }
+        },
+        {
+          "name": "A5. Cancel During PAYMENT_PENDING (no charge)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+            "console.log('Cancel signal sent. Check A6 to verify paymentStatus=PENDING (never charged).');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"cancel-before-payment-test\"\n}" },
+            "description": "Send this while A4 shows currentStep=PAYMENT_PENDING.\n\nExpected result (check A6):\n- status: CANCELLED\n- paymentStatus: PENDING   ← payment was NEVER charged (caught before activity scheduled)\n- shipmentStatus: NOT_CREATED\n\nIf paymentStatus=COMPLETED: the 10-second window had already closed when you sent the cancel.\nThe payment ran and was refunded by compensation — this is Scenario D."
+          }
+        },
+        {
+          "name": "A6. Verify Cancel Result",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Order cancelled', () => pm.expect(json.status).to.eql('CANCELLED'));",
+            "if (json.paymentStatus === 'PENDING') {",
+            "  console.log('SUCCESS: Cancel-before-payment worked. Payment was never charged.');",
+            "} else if (json.paymentStatus === 'REFUNDED') {",
+            "  console.log('LATE CANCEL: Payment ran and was refunded. Missed the PAYMENT_PENDING window.');",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{order_service}}/orders/{{order_id}}",
+            "description": "Verify the cancel-before-payment result.\n\npaymentStatus=PENDING  → SUCCESS: cancel caught in PAYMENT_PENDING window, no charge ever made.\npaymentStatus=REFUNDED → LATE: cancel arrived after payment ran, compensation issued a refund.\n\nCheck the event timeline (GET /orders/{id}/timeline) to see exactly which compensation steps ran."
+          }
+        },
+        {
+          "name": "B. Retry Payment Signal (after transient failure)",
+          "request": {
+            "method": "POST",
+            "url": "{{order_service}}/workflows/{{workflow_id}}/signal/retry-payment",
+            "description": "After a transient payment failure the workflow enters WAITING_FOR_PAYMENT_RETRY state and pauses up to 5 minutes.\nSend this signal to wake it and retry payment immediately.\nHas no effect if the workflow is not waiting for retry."
+          }
+        },
+        {
+          "name": "C. Force Payment Failure (set failure-rate=1.0 first)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440099\",\n  \"shippingAddress\": \"99 Failure Ave, Test City\"\n}" },
+            "description": "Set SIMULATION_PAYMENT_FAILURE_RATE=1.0 in docker-compose.yml and restart payment-service, then add items and confirm this order.\nTemporal retries 3× (all fail with InsufficientFunds — non-retryable), then compensation runs:\nReleaseInventory → OrderCancelled."
+          }
+        },
+        {
+          "name": "D. Cancel Mid-Flight (payment running)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{order_service}}/orders/{{order_id}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Cancel while payment is in-flight\"\n}" },
+            "description": "Send cancel while currentStep=PROCESSING_PAYMENT (during the 10s payment activity window).\nThe signal is queued; the workflow checks it when the activity returns.\n\nCompensation sequence: recordPaymentCompleted → refundPayment → releaseInventory → recordOrderCancelled.\nResult: status=CANCELLED, paymentStatus=REFUNDED."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🌐 Kong Gateway Routes",
+      "description": "Order-service requests routed through Kong API Gateway (port 8000).\n\nKong configuration (kong-init.sh):\n- Route: paths[]=/orders → service: order-service (http://order-service:8080)\n- strip_path=false — /orders prefix is preserved when forwarding\n- Plugin: rate-limiting (60 req/min, 1000 req/hr, policy=local)\n- Plugin: correlation-id (X-Correlation-Id header injected on every request)\n\nCoverage: ALL /orders/* endpoints are routed through Kong.\nNOT routed: /workflows/* endpoints — call order-service directly on port 8080.\n\nResponse headers added by Kong:\n- X-Correlation-Id: auto-generated UUID (echoed back to client)\n- X-RateLimit-Remaining-Minute: remaining requests this minute\n- X-RateLimit-Remaining-Hour: remaining requests this hour",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('order_id', json.orderId);",
+            "pm.collectionVariables.set('workflow_id', 'order-fulfillment-' + json.orderId);",
+            "console.log('Order:', json.orderId);",
+            "console.log('Correlation-Id:', pm.response.headers.get('X-Correlation-Id'));",
+            "console.log('Rate limit remaining (min):', pm.response.headers.get('X-RateLimit-Remaining-Minute'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{kong_gateway}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"shippingAddress\": \"1 Gateway Blvd, Kong City\"\n}" },
+            "description": "Creates a DRAFT order through Kong.\nResponse includes X-Correlation-Id (injected by Kong correlation-id plugin) and rate-limit headers."
+          }
+        },
+        {
+          "name": "Add Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Correlation-Id:', pm.response.headers.get('X-Correlation-Id'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{kong_gateway}}/orders/{{order_id}}/items",
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14\",\n  \"productName\": \"Mechanical Keyboard\",\n  \"quantity\": 1,\n  \"unitPrice\": \"199.99\"\n}" }
+          }
+        },
+        {
+          "name": "Remove Item",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{kong_gateway}}/orders/{{order_id}}/items/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
+            "description": "Removes an item from a DRAFT order. productId in path must match an added item."
+          }
+        },
+        {
+          "name": "Get Order",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Status:', json.status, '| Payment:', json.paymentStatus, '| Shipment:', json.shipmentStatus);",
+            "console.log('Correlation-Id:', pm.response.headers.get('X-Correlation-Id'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{kong_gateway}}/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "Get Order History",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Events recorded:', json.length);"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{kong_gateway}}/orders/{{order_id}}/history",
+            "description": "Returns raw domain events from the event_store table. Routed through Kong."
+          }
+        },
+        {
+          "name": "Get Order Timeline",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "json.forEach(e => console.log('v' + e.version + ' [' + e.eventType + '] ' + e.description));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{kong_gateway}}/orders/{{order_id}}/timeline",
+            "description": "Human-readable event timeline. Routed through Kong."
+          }
+        },
+        {
+          "name": "Confirm Order (starts Temporal workflow)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "var json = pm.response.json();",
+            "pm.test('Status 202', () => pm.response.to.have.status(202));",
+            "pm.collectionVariables.set('workflow_id', json.workflowId);",
+            "console.log('Workflow started:', json.workflowId);",
+            "console.log('Correlation-Id:', pm.response.headers.get('X-Correlation-Id'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{kong_gateway}}/orders/{{order_id}}/confirm",
+            "description": "Confirms order and starts Temporal saga. Returns workflowId.\n\nNote: the subsequent GET /workflows/{id} calls must go to port 8080 directly — /workflows is not a Kong route."
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "console.log('Cancel sent via Kong. Correlation-Id:', pm.response.headers.get('X-Correlation-Id'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{kong_gateway}}/orders/{{order_id}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer changed their mind\"\n}" },
+            "description": "Sends cancel signal to Temporal workflow (or directly cancels a DRAFT order) via Kong.\nCompensation runs asynchronously inside Temporal."
+          }
+        },
+        {
+          "name": "Retry Payment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202', () => pm.response.to.have.status(202));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{kong_gateway}}/orders/{{order_id}}/retry-payment",
+            "description": "Sends RetryPayment signal via Kong. Wakes a workflow paused in WAITING_FOR_PAYMENT_RETRY.\nOrder-service translates this to a Temporal signal internally."
+          }
+        }
+      ]
+    }
+
+  ]
+}

@@ -1,0 +1,5 @@
+postgres-order:5432:orderdb:orderuser:orderpass
+postgres-inventory:5432:inventorydb:inventoryuser:inventorypass
+postgres-payment:5432:paymentdb:paymentuser:paymentpass
+postgres-shipping:5432:shippingdb:shippinguser:shippingpass
+postgres-temporal:5432:temporal:temporal:temporal

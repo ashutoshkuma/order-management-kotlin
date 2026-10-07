@@ -1,0 +1,11 @@
+# Temporal dynamic configuration for local/dev PostgreSQL setup
+# This file is required by the temporalio/auto-setup image.
+# Values here override defaults at runtime without a server restart.
+
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}

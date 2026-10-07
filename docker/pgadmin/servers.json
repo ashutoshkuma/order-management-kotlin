@@ -1,0 +1,54 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Order DB",
+      "Group": "Order Management",
+      "Host": "postgres-order",
+      "Port": 5432,
+      "MaintenanceDB": "orderdb",
+      "Username": "orderuser",
+      "Password": "orderpass",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "Inventory DB",
+      "Group": "Order Management",
+      "Host": "postgres-inventory",
+      "Port": 5432,
+      "MaintenanceDB": "inventorydb",
+      "Username": "inventoryuser",
+      "Password": "inventorypass",
+      "SSLMode": "prefer"
+    },
+    "3": {
+      "Name": "Payment DB",
+      "Group": "Order Management",
+      "Host": "postgres-payment",
+      "Port": 5432,
+      "MaintenanceDB": "paymentdb",
+      "Username": "paymentuser",
+      "Password": "paymentpass",
+      "SSLMode": "prefer"
+    },
+    "4": {
+      "Name": "Shipping DB",
+      "Group": "Order Management",
+      "Host": "postgres-shipping",
+      "Port": 5432,
+      "MaintenanceDB": "shippingdb",
+      "Username": "shippinguser",
+      "Password": "shippingpass",
+      "SSLMode": "prefer"
+    },
+    "5": {
+      "Name": "Temporal DB",
+      "Group": "Order Management",
+      "Host": "postgres-temporal",
+      "Port": 5432,
+      "MaintenanceDB": "temporal",
+      "Username": "temporal",
+      "Password": "temporal",
+      "SSLMode": "prefer"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+name: "StandardOrderFulfillment"
+steps:
+  - name: "RESERVE_INVENTORY"
+    timeoutSeconds: 30
+    maxAttempts: 3
+    compensationActivity: "InventoryActivity"
+    compensationMethod: "releaseInventory"
+  - name: "PROCESS_PAYMENT"
+    timeoutSeconds: 60
+    maxAttempts: 2
+    compensationActivity: "PaymentActivity"
+    compensationMethod: "refundPayment"
+  - name: "CREATE_SHIPMENT"
+    timeoutSeconds: 30
+    maxAttempts: 3

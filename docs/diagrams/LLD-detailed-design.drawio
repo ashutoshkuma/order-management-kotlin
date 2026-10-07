@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" version="21.0.0" type="device">
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 1: Order Service — Hexagonal Architecture (Internal Layers)   -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<diagram name="LLD-1: Order Service Layers" id="lld-hexagonal">
+  <mxGraphModel dx="1800" dy="960" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2900" pageHeight="1400" math="0" shadow="1">
+    <root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+      <!-- TITLE -->
+      <mxCell id="t1" value="LLD — Order Service: Hexagonal Architecture + Event Sourcing + CQRS" style="text;html=1;fillColor=#1a1a2e;strokeColor=#1a1a2e;fontColor=#fff;fontStyle=1;fontSize=15;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="10" width="2360" height="40" as="geometry"/>
+      </mxCell>
+
+      <!-- ─────────────────────────────────── LAYER SWIMLANES ─────────────────────────────────── -->
+
+      <!-- API Layer bg -->
+      <mxCell id="bg-api" value="API LAYER (Inbound Adapters)" style="swimlane;startSize=28;fillColor=#fce4ec;strokeColor=#c62828;fontStyle=1;fontSize=11;fontColor=#c62828;" vertex="1" parent="1">
+        <mxGeometry x="20" y="60" width="380" height="1290" as="geometry"/>
+      </mxCell>
+
+      <!-- Application Layer bg -->
+      <mxCell id="bg-app" value="APPLICATION LAYER (Use Cases / Orchestration)" style="swimlane;startSize=28;fillColor=#e8f5e9;strokeColor=#1b5e20;fontStyle=1;fontSize=11;fontColor=#1b5e20;" vertex="1" parent="1">
+        <mxGeometry x="420" y="60" width="400" height="1290" as="geometry"/>
+      </mxCell>
+
+      <!-- Domain Layer bg -->
+      <mxCell id="bg-domain" value="DOMAIN LAYER (Pure Business Logic — Zero Framework Dependencies)" style="swimlane;startSize=28;fillColor=#fffde7;strokeColor=#f57f17;fontStyle=1;fontSize=11;fontColor=#f57f17;" vertex="1" parent="1">
+        <mxGeometry x="840" y="60" width="560" height="1290" as="geometry"/>
+      </mxCell>
+
+      <!-- Infrastructure Layer bg -->
+      <mxCell id="bg-infra" value="INFRASTRUCTURE LAYER (Outbound Adapters + CQRS Projection — Implements Domain Ports)" style="swimlane;startSize=28;fillColor=#ede7f6;strokeColor=#4527a0;fontStyle=1;fontSize=11;fontColor=#4527a0;" vertex="1" parent="1">
+        <mxGeometry x="1420" y="60" width="1460" height="1290" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─────────────────────────────────── API LAYER COMPONENTS ─────────────────────────────────── -->
+
+      <!-- OrderController -->
+      <mxCell id="order-ctrl" value="«REST Controller»&#xa;OrderController&#xa;&#xa;POST /orders&#xa;POST /orders/{id}/items&#xa;DELETE /orders/{id}/items/{pid}&#xa;POST /orders/{id}/confirm&#xa;POST /orders/{id}/cancel&#xa;POST /orders/{id}/payment&#xa;POST /orders/{id}/retry-payment&#xa;GET  /orders              ← CQRS projection&#xa;GET  /orders/{id}&#xa;GET  /orders/{id}/history&#xa;GET  /orders/{id}/timeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontStyle=0;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="115" width="340" height="200" as="geometry"/>
+      </mxCell>
+
+      <!-- WorkflowController -->
+      <mxCell id="wf-ctrl" value="«REST Controller»&#xa;WorkflowController&#xa;&#xa;GET  /workflows/{id}&#xa;POST /workflows/{id}/signal/cancel&#xa;POST /workflows/{id}/signal/retry-payment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="340" width="340" height="120" as="geometry"/>
+      </mxCell>
+
+      <!-- GlobalExceptionHandler -->
+      <mxCell id="ex-handler" value="«@RestControllerAdvice»&#xa;GlobalExceptionHandler&#xa;&#xa;DomainException → 400&#xa;OrderNotFoundException → 404&#xa;InvalidStateTransition → 409&#xa;OptimisticLocking → 409&#xa;Unhandled → 500&#xa;(RFC 7807 ProblemDetail)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ef9a9a;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="490" width="340" height="160" as="geometry"/>
+      </mxCell>
+
+      <!-- DTOs -->
+      <mxCell id="dtos" value="«Request DTOs»&#xa;CreateOrderRequest&#xa;AddItemRequest&#xa;CancelOrderRequest&#xa;&#xa;«Response DTOs»&#xa;OrderResponse            ← event replay&#xa;OrderSummaryResponse     ← CQRS projection&#xa;EventHistoryResponse&#xa;OrderResponse.OrderItemResponse&#xa;&#xa;«Mapper» (MapStruct)&#xa;OrderMapper&#xa;(compile-time, no reflection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="680" width="340" height="210" as="geometry"/>
+      </mxCell>
+
+      <!-- CorrelationIdFilter -->
+      <mxCell id="corr-filter" value="«OncePerRequestFilter»&#xa;CorrelationIdFilter&#xa;&#xa;Extracts/generates X-Correlation-ID&#xa;Sets MDC for structured logging&#xa;Echoes back in response header" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ef9a9a;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="920" width="340" height="110" as="geometry"/>
+      </mxCell>
+
+      <!-- Swagger -->
+      <mxCell id="swagger-box" value="«OpenAPI 3.0»&#xa;OpenApiConfig + springdoc&#xa;&#xa;/swagger-ui.html  (UI)&#xa;/v3/api-docs       (JSON)&#xa;/v3/api-docs.yaml  (YAML)&#xa;@Operation, @ApiResponse annotations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ef9a9a;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="35" y="1055" width="340" height="130" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─────────────────────────────────── APPLICATION LAYER ─────────────────────────────────── -->
+
+      <!-- OrderCommandService -->
+      <mxCell id="cmd-svc" value="«@Service»&#xa;OrderCommandService&#xa;«COMMAND SIDE»&#xa;&#xa;createOrder(CreateOrderCommand)&#xa;addItem(AddItemCommand)&#xa;removeItem(RemoveItemCommand)&#xa;confirmOrder(ConfirmOrderCommand)&#xa;cancelOrder(CancelOrderCommand)&#xa;&#xa;— called by Temporal Activities —&#xa;recordInventoryReserved()&#xa;recordInventoryReservationFailed()&#xa;recordInventoryReleased()&#xa;recordPaymentCompleted()&#xa;recordPaymentFailed()&#xa;recordRefundCompleted()&#xa;recordShipmentCreated()&#xa;recordOrderDelivered()&#xa;recordOrderCancelled()&#xa;&#xa;@Transactional on all methods&#xa;MeterRegistry for metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontStyle=0;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="435" y="115" width="365" height="440" as="geometry"/>
+      </mxCell>
+
+      <!-- OrderQueryService -->
+      <mxCell id="qry-svc" value="«@Service» OrderQueryService&#xa;implements OrderQueryUseCase&#xa;«QUERY SIDE (CQRS)»&#xa;&#xa;getOrder(OrderId) → Order            [event replay]&#xa;getOrderHistory(OrderId) → List&lt;DomainEvent&gt;&#xa;getOrderTimeline(OrderId) → List&lt;TimelineEntry&gt;&#xa;getWorkflowStatus(workflowId)&#xa;listOrders(statuses, customerId, pageable)&#xa;  → Page&lt;OrderSummaryResponse&gt;  [projection]&#xa;&#xa;@Transactional(readOnly=true)&#xa;No state changes — reads only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="435" y="580" width="365" height="220" as="geometry"/>
+      </mxCell>
+
+      <!-- Domain Commands -->
+      <mxCell id="commands" value="«Domain Commands (Intent)»&#xa;&#xa;CreateOrderCommand(orderId, customerId, address)&#xa;AddItemCommand(orderId, productId, name, qty, price)&#xa;RemoveItemCommand(orderId, productId)&#xa;ConfirmOrderCommand(orderId)&#xa;CancelOrderCommand(orderId, reason)&#xa;&#xa;Commands are rejected if business&#xa;rules fail. Events are not." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a5d6a7;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="435" y="830" width="365" height="200" as="geometry"/>
+      </mxCell>
+
+      <!-- Inbound Ports -->
+      <mxCell id="inbound-ports" value="«Inbound Ports (interfaces)»&#xa;&#xa;OrderCommandUseCase&#xa;  + createOrder()&#xa;  + addItem()&#xa;  + removeItem()&#xa;  + confirmOrder()&#xa;  + cancelOrder()&#xa;  + recordPaymentCompleted()&#xa;  + [Temporal activity callbacks]&#xa;&#xa;OrderQueryUseCase&#xa;  + getOrder()&#xa;  + getOrderHistory()&#xa;  + getOrderTimeline()&#xa;  + getWorkflowStatus()&#xa;  + listOrders(statuses, customerId, pageable)&#xa;&#xa;Controllers inject interfaces only.&#xa;Services implement them." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a5d6a7;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="435" y="1060" width="365" height="210" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─────────────────────────────────── DOMAIN LAYER ─────────────────────────────────── -->
+
+      <!-- Order Aggregate -->
+      <mxCell id="order-agg" value="«Aggregate Root»&#xa;Order&#xa;&#xa;— State (private, no setters) —&#xa;OrderId id, long version&#xa;CustomerId customerId&#xa;OrderStatus status&#xa;List&lt;OrderItem&gt; items&#xa;Money totalAmount&#xa;PaymentStatus paymentStatus&#xa;ShipmentStatus shipmentStatus&#xa;String shippingAddress, workflowId&#xa;String reservationId, transactionId&#xa;String shipmentId, trackingNumber&#xa;List&lt;DomainEvent&gt; pendingEvents&#xa;&#xa;— Command Handlers (raise events) —&#xa;static create(orderId, customerId, addr)&#xa;addItem(OrderItem)&#xa;removeItem(UUID productId)&#xa;confirm(workflowId)&#xa;reserveInventory(reservationId)&#xa;failInventoryReservation(reason)&#xa;releaseInventory(reason)&#xa;completePayment(txId, amount)&#xa;failPayment(reason, retryable)&#xa;completeRefund(refundTxId, amount)&#xa;createShipment(id, tracking, carrier)&#xa;deliverOrder(shipmentId)&#xa;cancel(reason, cancelledBy)&#xa;&#xa;— Event Application —&#xa;apply(DomainEvent) ← pattern matching&#xa;&#xa;— Reconstitution —&#xa;static reconstitute(List&lt;DomainEvent&gt;)&#xa;static reconstituteFromSnapshot(snap, events)&#xa;&#xa;— Infrastructure —&#xa;drainPendingEvents() → List&lt;DomainEvent&gt;&#xa;validateVersion(expected)&#xa;toSnapshot() → OrderSnapshot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontStyle=0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="855" y="115" width="260" height="680" as="geometry"/>
+      </mxCell>
+
+      <!-- Domain Events -->
+      <mxCell id="domain-events" value="«sealed interface» DomainEvent&#xa;  + UUID eventId()&#xa;  + String aggregateId()&#xa;  + long version()&#xa;  + Instant occurredAt()&#xa;  + String eventType()&#xa;&#xa;13 event records (all immutable):&#xa;  OrderCreatedEvent&#xa;  ItemAddedEvent&#xa;  ItemRemovedEvent&#xa;  OrderConfirmedEvent&#xa;  InventoryReservedEvent&#xa;  InventoryReservationFailedEvent&#xa;  InventoryReleasedEvent&#xa;  PaymentCompletedEvent&#xa;  PaymentFailedEvent&#xa;  RefundCompletedEvent&#xa;  ShipmentCreatedEvent&#xa;  ShipmentDeliveredEvent&#xa;  OrderCancelledEvent&#xa;&#xa;Serialized as JSONB in event_store.&#xa;@JsonTypeInfo for polymorphic deserialization.&#xa;Kotlin sealed interface → exhaustive `when`." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff176;strokeColor=#f57f17;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1130" y="115" width="240" height="430" as="geometry"/>
+      </mxCell>
+
+      <!-- Value Objects -->
+      <mxCell id="value-objects" value="«Value Objects»&#xa;(immutable records)&#xa;&#xa;OrderId(UUID value)&#xa;CustomerId(UUID value)&#xa;Money(BigDecimal, Currency)&#xa;  + add(Money) → Money&#xa;  + subtract(Money) → Money&#xa;  + multiply(int) → Money&#xa;  + isZero() → boolean&#xa;OrderItem(productId, name, qty, price)&#xa;  + totalPrice() → Money&#xa;  + withQuantity(int) → OrderItem&#xa;&#xa;«Enums»&#xa;OrderStatus (DRAFT→DELIVERED/CANCELLED)&#xa;PaymentStatus (PENDING→REFUNDED)&#xa;ShipmentStatus (NOT_CREATED→DELIVERED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1130" y="565" width="240" height="350" as="geometry"/>
+      </mxCell>
+
+      <!-- Outbound Ports -->
+      <mxCell id="outbound-ports" value="«Outbound Ports (interfaces)»&#xa;Domain defines these. Infra implements.&#xa;&#xa;EventStore&#xa;  + appendEvents(id, type, events, expectedVer)&#xa;  + loadEvents(aggregateId) → List&#xa;  + loadEvents(aggregateId, fromVersion) → List&#xa;  + getCurrentVersion(aggregateId) → long&#xa;  + exists(aggregateId) → boolean&#xa;&#xa;SnapshotStore&#xa;  + saveSnapshot(OrderSnapshot)&#xa;  + loadLatestSnapshot(aggregateId) → Optional&#xa;&#xa;OrderRepository&#xa;  + save(Order) [appends events + snapshot]&#xa;  + findById(OrderId) → Optional&lt;Order&gt;&#xa;&#xa;WorkflowPort&#xa;  + startFulfillmentWorkflow(orderId, wfId)&#xa;  + sendCancelSignal(workflowId, reason)&#xa;  + sendRetryPaymentSignal(workflowId)&#xa;  + queryWorkflowStatus(workflowId)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="855" y="830" width="515" height="420" as="geometry"/>
+      </mxCell>
+
+      <!-- OrderSnapshot -->
+      <mxCell id="order-snapshot" value="«record» OrderSnapshot&#xa;&#xa;UUID snapshotId&#xa;String aggregateId&#xa;long version&#xa;Instant takenAt&#xa;[all Order fields...]&#xa;&#xa;SNAPSHOT_THRESHOLD = 50&#xa;Taken every 50 events.&#xa;Stored in order_snapshots table.&#xa;Expendable — regeneratable from events." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff176;strokeColor=#f57f17;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1130" y="935" width="240" height="250" as="geometry"/>
+      </mxCell>
+
+      <!-- Domain Exceptions -->
+      <mxCell id="exceptions" value="«Domain Exceptions»&#xa;&#xa;DomainException (base)&#xa;  ├── InvalidStateTransitionException&#xa;  ├── OptimisticLockingException&#xa;  └── OrderNotFoundException" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=8;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="855" y="1260" width="515" height="80" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─────────────────────────────────── INFRASTRUCTURE LAYER ─────────────────────────────────── -->
+
+      <!-- EventStoreAdapter -->
+      <mxCell id="event-store-impl" value="«@Repository» EventStoreAdapter&#xa;implements EventStore&#xa;&#xa;Spring NamedParameterJdbcTemplate&#xa;ObjectMapper (Jackson)&#xa;&#xa;appendEvents():&#xa;  1. getCurrentVersion() check (opt. lock)&#xa;  2. INSERT INTO event_store per event&#xa;  3. DuplicateKeyException → OptimisticLockingEx&#xa;&#xa;loadEvents(): SELECT ... WHERE aggregate_id=?&#xa;              ORDER BY version ASC&#xa;&#xa;SQL: payload stored as JSONB&#xa;     metadata includes correlationId&#xa;&#xa;UNIQUE INDEX (aggregate_id, version)&#xa;= database-level optimistic lock guarantee" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1435" y="115" width="290" height="340" as="geometry"/>
+      </mxCell>
+
+      <!-- SnapshotStoreAdapter -->
+      <mxCell id="snapshot-impl" value="«@Repository» SnapshotStoreAdapter&#xa;implements SnapshotStore&#xa;&#xa;saveSnapshot(): UPSERT on aggregate_id&#xa;  ON CONFLICT → UPDATE (keep latest only)&#xa;&#xa;loadLatestSnapshot(): SELECT WHERE aggregate_id=?&#xa;&#xa;Snapshot stored as JSONB.&#xa;Missing fields handled by&#xa;FAIL_ON_UNKNOWN_PROPERTIES=false" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1435" y="480" width="290" height="230" as="geometry"/>
+      </mxCell>
+
+      <!-- OrderRepositoryAdapter -->
+      <mxCell id="repo-impl" value="«@Repository» OrderRepositoryAdapter&#xa;implements OrderRepository&#xa;&#xa;save(Order):&#xa;  1. order.drainPendingEvents()&#xa;  2. expectedVersion = version - events.size&#xa;  3. eventStore.appendEvents(...)&#xa;  4. if version % 50 == 0 → saveSnapshot()&#xa;&#xa;findById(OrderId):&#xa;  1. eventStore.exists(id)?&#xa;  2. snapshotStore.loadLatestSnapshot(id)&#xa;  3a. WITH snapshot: loadEvents(id, snap.version)&#xa;      Order.reconstituteFromSnapshot(snap, events)&#xa;  3b. WITHOUT snapshot: loadEvents(id, 0)&#xa;      Order.reconstitute(allEvents)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1435" y="740" width="290" height="290" as="geometry"/>
+      </mxCell>
+
+      <!-- WorkflowPortAdapter -->
+      <mxCell id="wf-adapter" value="«@Component» WorkflowPortAdapter&#xa;implements WorkflowPort&#xa;&#xa;WorkflowClient (Temporal SDK)&#xa;TASK_QUEUE = ORDER_FULFILLMENT_QUEUE&#xa;&#xa;startFulfillmentWorkflow():&#xa;  WorkflowOptions (id, queue, timeouts)&#xa;  WorkflowClient.start(workflow::fulfill)&#xa;  WorkflowExecutionAlreadyStarted → idempotent&#xa;&#xa;sendCancelSignal():&#xa;  workflowClient.newWorkflowStub(id)&#xa;  workflow.cancelOrder(reason)&#xa;&#xa;queryWorkflowStatus():&#xa;  workflow.getProgress() [Temporal Query]&#xa;  Returns live in-memory state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1745" y="115" width="290" height="340" as="geometry"/>
+      </mxCell>
+
+      <!-- Temporal Worker Setup -->
+      <mxCell id="worker-setup" value="«@Component» TemporalWorkerSetup&#xa;@PostConstruct createWorker()&#xa;&#xa;workerFactory.newWorker(TASK_QUEUE)&#xa;worker.registerWorkflowImplementationTypes(&#xa;  OrderFulfillmentWorkflowImpl.class)&#xa;worker.registerActivitiesImplementations(&#xa;  inventoryActivity,&#xa;  paymentActivity,&#xa;  shippingActivity,&#xa;  notificationActivity)&#xa;workerFactory.start()&#xa;&#xa;Polls Temporal gRPC :7233 for tasks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1745" y="480" width="290" height="260" as="geometry"/>
+      </mxCell>
+
+      <!-- Activity Impls -->
+      <mxCell id="activity-impls" value="«Activity Impls» (@ActivityImpl ORDER_FULFILLMENT_QUEUE)&#xa;&#xa;InventoryActivityImpl&#xa;  reserveInventory() → HTTP POST inv-svc:8081/reserve&#xa;  releaseInventory() → HTTP DELETE inv-svc:8081/reserve/{id}&#xa;  record*() → OrderCommandService (idempotent)&#xa;&#xa;PaymentActivityImpl&#xa;  processPayment() → HTTP POST pay-svc:8082/charge&#xa;  refundPayment() → HTTP POST pay-svc:8082/refund&#xa;  record*() → OrderCommandService (idempotent)&#xa;  Failure types: transient / InsufficientFunds / CardDeclined&#xa;&#xa;ShippingActivityImpl&#xa;  createShipment() → HTTP POST ship-svc:8083/shipments&#xa;  confirmDelivery() → HTTP GET ship-svc:8083/shipments/{id}&#xa;  record*() → OrderCommandService (idempotent)&#xa;&#xa;NotificationActivityImpl&#xa;  send*Notification() → JmsTemplate publish&#xa;                        to notification.requests topic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b39ddb;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1435" y="1060" width="600" height="290" as="geometry"/>
+      </mxCell>
+
+      <!-- Solace Publisher -->
+      <mxCell id="kafka-publisher" value="«@Component» OrderEventSolacePublisher&#xa;&#xa;JmsTemplate&#xa;&#xa;publishAfterCommit(DomainEvent):&#xa;  @TransactionalEventListener(AFTER_COMMIT)&#xa;  Publishes to order.events topic&#xa;  Key = orderId (ensures per-order ordering)&#xa;&#xa;OUTBOX PATTERN:&#xa;  Event persisted in DB first,&#xa;  then published to Solace after TX commit.&#xa;  Prevents dual-write problem." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1745" y="770" width="290" height="260" as="geometry"/>
+      </mxCell>
+
+      <!-- DB Schema box -->
+      <mxCell id="db-schema" value="PostgreSQL Schema (orderdb)&#xa;&#xa;event_store:&#xa;  id BIGSERIAL PK&#xa;  event_id UUID UNIQUE&#xa;  aggregate_id VARCHAR(255)&#xa;  aggregate_type VARCHAR(100)&#xa;  event_type VARCHAR(200)&#xa;  version BIGINT&#xa;  payload JSONB&#xa;  metadata JSONB&#xa;  timestamp TIMESTAMPTZ&#xa;  UNIQUE(aggregate_id, version) ← opt.lock&#xa;&#xa;order_snapshots:&#xa;  snapshot_id UUID PK&#xa;  aggregate_id VARCHAR(255) UNIQUE&#xa;  version BIGINT&#xa;  snapshot_data JSONB&#xa;  created_at TIMESTAMPTZ&#xa;&#xa;order_summary  [CQRS READ MODEL]:&#xa;  order_id VARCHAR(36) PK&#xa;  customer_id VARCHAR(36) INDEX&#xa;  status VARCHAR(30) INDEX&#xa;  payment_status, shipment_status&#xa;  total_amount, item_count&#xa;  shipping_address, workflow_id&#xa;  tracking_number&#xa;  created_at, confirmed_at, paid_at&#xa;  delivered_at, cancelled_at, cancel_reason&#xa;  updated_at&#xa;  INDEX (customer_id, status)  ← composite&#xa;  INDEX (created_at DESC)      ← pagination&#xa;&#xa;Flyway migrations V1, V2, V3" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#01579b;fontSize=8;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="2055" y="115" width="290" height="600" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─────────────────────────────────── CONNECTIONS ─────────────────────────────────── -->
+
+      <!-- Controller → Application Services -->
+      <mxCell id="c1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="order-ctrl" target="cmd-svc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c1-l" value="commands" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c1"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <mxCell id="c2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="order-ctrl" target="qry-svc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c2-l" value="queries" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c2"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <mxCell id="c3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="wf-ctrl" target="qry-svc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      <!-- App Service → Domain (Order aggregate via Repository) -->
+      <mxCell id="c4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1b5e20;strokeWidth=2;" edge="1" source="cmd-svc" target="order-agg" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c4-l" value="new Order() / order.confirm()" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c4"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- App Service → Ports -->
+      <mxCell id="c5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1b5e20;strokeWidth=2;dashed=1;" edge="1" source="cmd-svc" target="outbound-ports" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c5-l" value="uses ports" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c5"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- Ports → Adapters -->
+      <mxCell id="c6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4527a0;strokeWidth=2;dashed=1;" edge="1" source="outbound-ports" target="repo-impl" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c6-l" value="«implements»" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c6"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <mxCell id="c7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4527a0;strokeWidth=2;dashed=1;" edge="1" source="outbound-ports" target="wf-adapter" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c7-l" value="«implements»" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c7"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- Repo → EventStore + Snapshot -->
+      <mxCell id="c8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4527a0;strokeWidth=1.5;" edge="1" source="repo-impl" target="event-store-impl" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c9" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4527a0;strokeWidth=1.5;" edge="1" source="repo-impl" target="snapshot-impl" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      <!-- EventStore → DB -->
+      <mxCell id="c10" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#01579b;strokeWidth=2;" edge="1" source="event-store-impl" target="db-schema" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c10-l" value="JDBC INSERT/SELECT" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c10"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- Order → Events -->
+      <mxCell id="c11" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#f57f17;strokeWidth=2;" edge="1" source="order-agg" target="domain-events" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c11-l" value="raises / applies" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c11"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+
+      <!-- ─────────────────────────────────── CQRS PROJECTION COMPONENTS ─────────────────────────────────── -->
+
+      <!-- OrderSummaryRepository -->
+      <mxCell id="summary-repo" value="«@Repository» OrderSummaryRepository&#xa;CQRS Read Model (no domain port)&#xa;NamedParameterJdbcTemplate&#xa;&#xa;— Write methods (called by projector) —&#xa;insert(orderId, customerId, address, at)&#xa;updateStatus(orderId, status, at)&#xa;confirmOrder(orderId, amount, wfId, at)&#xa;completePayment(orderId, at)&#xa;failPayment(orderId, at)&#xa;refundPayment(orderId, at)&#xa;createShipment(orderId, tracking, at)&#xa;deliverOrder(orderId, at)&#xa;cancelOrder(orderId, reason, at)&#xa;incrementItemCount(orderId, at)&#xa;decrementItemCount(orderId, at)&#xa;&#xa;— Read method (called by QueryService) —&#xa;findAll(statuses, customerId, pageable)&#xa;  → Page&lt;OrderSummaryResponse&gt;&#xa;  Dynamic WHERE 1=1 builder&#xa;  IN (:statuses) + customer_id = :id&#xa;&#xa;Reads/writes order_summary table only." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="2375" y="480" width="290" height="360" as="geometry"/>
+      </mxCell>
+
+      <!-- OrderProjectionUpdater -->
+      <mxCell id="proj-updater" value="«@Component» OrderProjectionUpdater&#xa;CQRS Projection Maintainer&#xa;&#xa;@TransactionalEventListener(AFTER_COMMIT)&#xa;@Transactional(REQUIRES_NEW)&#xa;public void on(DomainEvent event)&#xa;&#xa;Pattern-matches on sealed DomainEvent:&#xa;  OrderCreatedEvent        → insert row&#xa;  ItemAddedEvent           → incrementItemCount&#xa;  ItemRemovedEvent         → decrementItemCount&#xa;  OrderConfirmedEvent      → confirmOrder&#xa;  InventoryReservedEvent   → updateStatus&#xa;  PaymentCompletedEvent    → completePayment&#xa;  PaymentFailedEvent       → failPayment&#xa;  RefundCompletedEvent     → refundPayment&#xa;  ShipmentCreatedEvent     → createShipment&#xa;  ShipmentDeliveredEvent   → deliverOrder&#xa;  OrderCancelledEvent      → cancelOrder&#xa;  InventoryReservationFailed → (ignored)&#xa;  InventoryReleased          → (ignored)&#xa;&#xa;WHY REQUIRES_NEW:&#xa;  Main TX already committed.&#xa;  Projection update gets its own TX.&#xa;  If it fails, event_store still has the&#xa;  event — projection is rebuildable." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#4527a0;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="2375" y="870" width="290" height="360" as="geometry"/>
+      </mxCell>
+
+      <!-- CQRS label separating projection column -->
+      <mxCell id="proj-header" value="CQRS PROJECTION (Read Model)" style="text;html=1;fillColor=#7b1fa2;strokeColor=#7b1fa2;fontColor=#fff;fontStyle=1;fontSize=10;align=center;" vertex="1" parent="1">
+        <mxGeometry x="2375" y="115" width="290" height="30" as="geometry"/>
+      </mxCell>
+
+      <!-- CQRS note box -->
+      <mxCell id="proj-note" value="Pattern: CQRS Read Model&#xa;&#xa;Write side: event_store (append-only)&#xa;Read side: order_summary (denormalized)&#xa;&#xa;How it stays in sync:&#xa;  1. OrderCommandService.anyCommand()&#xa;  2. OrderRepositoryAdapter.save(order)&#xa;  3. Spring publishEvent(DomainEvent)&#xa;  4. TX commits (event_store durable)&#xa;  5. @TransactionalEventListener fires&#xa;  6. OrderProjectionUpdater.on(event)&#xa;     runs in REQUIRES_NEW transaction&#xa;  7. order_summary row updated&#xa;&#xa;Benefits:&#xa;  • GET /orders with status/customerId&#xa;    filters in sub-millisecond&#xa;  • No event replay for list queries&#xa;  • page + size pagination via SQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=8;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="2375" y="160" width="290" height="290" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── NEW EDGES ─── -->
+
+      <!-- qry-svc → summary-repo (listOrders path) -->
+      <mxCell id="c12" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1b5e20;strokeWidth=1.5;dashed=1;" edge="1" source="qry-svc" target="summary-repo" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c12-l" value="listOrders()" style="edgeLabel;html=1;fontSize=8;fontColor=#1b5e20;" vertex="1" connectable="0" parent="c12"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- repo-impl → proj-updater (Spring event fires AFTER_COMMIT) -->
+      <mxCell id="c13" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=1.5;dashed=1;" edge="1" source="repo-impl" target="proj-updater" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c13-l" value="Spring event AFTER_COMMIT" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;" vertex="1" connectable="0" parent="c13"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- summary-repo → db-schema (reads order_summary) -->
+      <mxCell id="c14" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#01579b;strokeWidth=1.5;" edge="1" source="summary-repo" target="db-schema" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c14-l" value="SELECT order_summary" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c14"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- proj-updater → db-schema (writes order_summary) -->
+      <mxCell id="c15" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#01579b;strokeWidth=1.5;" edge="1" source="proj-updater" target="db-schema" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="c15-l" value="UPDATE order_summary" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="c15"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+    </root>
+  </mxGraphModel>
+</diagram>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 2: Temporal Workflow — Saga Flow + Compensation               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<diagram name="LLD-2: Temporal Workflow and Saga" id="lld-workflow">
+  <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="1">
+    <root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+
+      <mxCell id="t2" value="LLD — Temporal: OrderFulfillmentWorkflow, Saga Compensation, Signals, and Retry Policies" style="text;html=1;fillColor=#1a1a2e;strokeColor=#1a1a2e;fontColor=#fff;fontStyle=1;fontSize=15;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="10" width="2160" height="40" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── WORKFLOW INTERFACE BOX ─── -->
+      <mxCell id="wf-interface" value="«@WorkflowInterface»&#xa;OrderFulfillmentWorkflow&#xa;&#xa;@WorkflowMethod&#xa;  void fulfill(String orderId)&#xa;&#xa;@SignalMethod&#xa;  void cancelOrder(String reason)&#xa;  void retryPayment()&#xa;&#xa;@QueryMethod&#xa;  String getCurrentStatus()&#xa;  WorkflowProgress getProgress()&#xa;    → status, currentStep, retryCount,&#xa;       cancellationRequested, failureReason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontStyle=1;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="30" y="75" width="280" height="260" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── ACTIVITY STUBS (retry policies) ─── -->
+      <mxCell id="act-stubs" value="Activity Stubs (in WorkflowImpl)&#xa;&#xa;InventoryActivity stub&#xa;  startToCloseTimeout: 30s&#xa;  maxAttempts: 3&#xa;  backoff: 2x, init 1s, max 30s&#xa;&#xa;PaymentActivity stub&#xa;  startToCloseTimeout: 60s&#xa;  maxAttempts: 2&#xa;  backoff: 2x, init 2s, max 60s&#xa;  doNotRetry: InsufficientFundsException&#xa;             CardDeclinedException&#xa;&#xa;ShippingActivity stub&#xa;  startToCloseTimeout: 30s&#xa;  maxAttempts: 3&#xa;  backoff: 2x, init 1s&#xa;&#xa;NotificationActivity stub&#xa;  startToCloseTimeout: 10s&#xa;  maxAttempts: 2 (best-effort)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="30" y="375" width="280" height="370" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── WORKFLOW STATE VARIABLES ─── -->
+      <mxCell id="wf-state" value="Workflow State (queryable via @QueryMethod)&#xa;&#xa;String  status           = &quot;STARTING&quot;&#xa;String  currentStep      = &quot;INITIALIZING&quot;&#xa;int     retryCount       = 0&#xa;boolean cancellationRequested = false&#xa;String  cancellationReason    = &quot;&quot;&#xa;boolean paymentRetryRequested = false&#xa;String  failureReason         = &quot;&quot;&#xa;&#xa;// Compensation tracking&#xa;String  reservationId = null  // set after step 1&#xa;String  transactionId = null  // set after step 2&#xa;String  shipmentId    = null  // set after step 3&#xa;&#xa;Mutations happen in signal handlers and main flow.&#xa;Read via @QueryMethod — no DB hit." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="30" y="790" width="280" height="340" as="geometry"/>
+      </mxCell>
+
+
+      <!-- ─── MAIN WORKFLOW FLOWCHART ─── -->
+
+      <!-- START -->
+      <mxCell id="flow-start" value="fulfill(orderId) STARTS" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e65100;strokeColor=#e65100;fontColor=#fff;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+        <mxGeometry x="430" y="75" width="220" height="55" as="geometry"/>
+      </mxCell>
+
+      <!-- Cancel check 0 -->
+      <mxCell id="check0" value="cancellationRequested?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="165" width="220" height="70" as="geometry"/>
+      </mxCell>
+
+      <!-- STEP 1 -->
+      <mxCell id="step1" value="STEP 1: Reserve Inventory&#xa;inventoryActivity.reserveInventory(orderId)&#xa;Temporal retries up to 3x with backoff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="280" width="220" height="80" as="geometry"/>
+      </mxCell>
+
+      <!-- Step 1 fail -->
+      <mxCell id="step1-fail" value="INVENTORY FAILS&#xa;(retries exhausted)&#xa;&#xa;recordInventoryReservationFailed()&#xa;recordOrderCancelled(SYSTEM_COMP)&#xa;→ status=FAILED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="720" y="280" width="200" height="120" as="geometry"/>
+      </mxCell>
+
+      <!-- Step 1 success: record -->
+      <mxCell id="step1-ok" value="recordInventoryReserved()&#xa;reservationId = result.reservationId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="400" width="220" height="60" as="geometry"/>
+      </mxCell>
+
+      <!-- Cancel check 1 -->
+      <mxCell id="check1" value="cancellationRequested?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="500" width="220" height="70" as="geometry"/>
+      </mxCell>
+
+      <!-- STEP 2 -->
+      <mxCell id="step2" value="STEP 2: Process Payment&#xa;paymentActivity.processPayment(orderId)&#xa;Loop up to 3 app-level attempts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="615" width="220" height="80" as="geometry"/>
+      </mxCell>
+
+      <!-- Payment retry wait -->
+      <mxCell id="pay-retry" value="TRANSIENT FAILURE (retryable)&#xa;&#xa;recordPaymentFailed()&#xa;currentStep = WAITING_FOR_PAYMENT_RETRY&#xa;&#xa;Workflow.await(5 min,&#xa;  () → retryPaymentRequested&#xa;       || cancellationRequested)&#xa;&#xa;Signal received? → retry&#xa;Timeout / cancel? → compensate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="720" y="580" width="220" height="200" as="geometry"/>
+      </mxCell>
+
+      <!-- Payment hard fail -->
+      <mxCell id="pay-hard-fail" value="NON-RETRYABLE FAILURE&#xa;(InsufficientFunds / CardDeclined)&#xa;OR attempts exhausted&#xa;&#xa;compensateInventory()&#xa;  → releaseInventory()&#xa;  → recordInventoryReleased()&#xa;recordOrderCancelled(SYSTEM_COMP)&#xa;→ status=FAILED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="960" y="580" width="210" height="200" as="geometry"/>
+      </mxCell>
+
+      <!-- Step 2 success -->
+      <mxCell id="step2-ok" value="recordPaymentCompleted()&#xa;transactionId = result.transactionId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="740" width="220" height="60" as="geometry"/>
+      </mxCell>
+
+      <!-- Cancel check 2 -->
+      <mxCell id="check2" value="cancellationRequested?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="845" width="220" height="70" as="geometry"/>
+      </mxCell>
+
+      <!-- STEP 3 -->
+      <mxCell id="step3" value="STEP 3: Create Shipment&#xa;shippingActivity.createShipment(orderId)&#xa;Temporal retries up to 3x" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="960" width="220" height="80" as="geometry"/>
+      </mxCell>
+
+      <!-- Ship fail -->
+      <mxCell id="ship-fail" value="SHIPMENT FAILS&#xa;&#xa;compensatePayment()&#xa;  → refundPayment()&#xa;  → recordRefundCompleted()&#xa;compensateInventory()&#xa;  → releaseInventory()&#xa;  → recordInventoryReleased()&#xa;recordOrderCancelled(SYSTEM_COMP)&#xa;→ status=FAILED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="720" y="940" width="210" height="220" as="geometry"/>
+      </mxCell>
+
+      <!-- Step 3 success -->
+      <mxCell id="step3-ok" value="recordShipmentCreated()&#xa;shipmentId = result.shipmentId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="1085" width="220" height="60" as="geometry"/>
+      </mxCell>
+
+      <!-- STEP 4 -->
+      <mxCell id="step4" value="STEP 4: Confirm Delivery&#xa;shippingActivity.confirmDelivery()&#xa;(simulates carrier webhook wait)&#xa;recordShipmentDelivered()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="1190" width="220" height="90" as="geometry"/>
+      </mxCell>
+
+      <!-- STEP 5 / END -->
+      <mxCell id="step5" value="STEP 5: Complete&#xa;notificationActivity.sendOrderDeliveredNotification()&#xa;status = COMPLETED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="430" y="1325" width="220" height="80" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="flow-end" value="WORKFLOW COMPLETED ✓" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+        <mxGeometry x="455" y="1440" width="170" height="50" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── SIGNAL HANDLERS panel ─── -->
+      <mxCell id="signals-panel" value="SIGNAL HANDLERS&#xa;&#xa;@SignalMethod cancelOrder(reason):&#xa;  cancellationRequested = true&#xa;  cancellationReason = reason&#xa;  → Workflow processes at next checkpoint&#xa;  → Triggers compensateAndCancel()&#xa;&#xa;@SignalMethod retryPayment():&#xa;  paymentRetryRequested = true&#xa;  → Wakes Workflow.await() in payment loop&#xa;  → Workflow retries PaymentActivity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#0d47a1;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1220" y="75" width="280" height="260" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── DETERMINISM RULES panel ─── -->
+      <mxCell id="determinism" value="⚠ TEMPORAL DETERMINISM RULES&#xa;&#xa;✅ ALLOWED in workflow code:&#xa;  Workflow.currentTimeMillis()&#xa;  Workflow.newRandom()&#xa;  Workflow.sleep(duration)&#xa;  Workflow.await(condition)&#xa;  Activity stub calls&#xa;  Signal/Query handlers&#xa;&#xa;❌ FORBIDDEN in workflow code:&#xa;  System.currentTimeMillis()&#xa;  UUID.randomUUID()&#xa;  HTTP calls, DB calls&#xa;  Thread.sleep()&#xa;  System.getenv()&#xa;  Random, ThreadLocal&#xa;&#xa;WHY: Temporal replays workflow history on&#xa;crash recovery. Non-determinism = divergence." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe9e7;strokeColor=#bf360c;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1220" y="375" width="280" height="370" as="geometry"/>
+      </mxCell>
+
+      <!-- ─── COMPENSATION MATRIX panel ─── -->
+      <mxCell id="comp-matrix" value="SAGA COMPENSATION MATRIX&#xa;&#xa;Failure Point          → Compensation Steps&#xa;──────────────────────────────────────────&#xa;Inventory fails        → cancel order&#xa;&#xa;Payment fails          → releaseInventory()&#xa;(after inv. reserved)    cancel order&#xa;&#xa;Shipment fails         → refundPayment()&#xa;(after payment taken)    releaseInventory()&#xa;                         cancel order&#xa;&#xa;CancelOrder signal     → depends on step:&#xa;  Before inventory:      cancel directly&#xa;  After inventory:       release inv + cancel&#xa;  After payment:         refund + release + cancel&#xa;&#xa;Compensation is BEST-EFFORT:&#xa;If compensation fails, logs error and continues.&#xa;Production: route to manual-intervention queue." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1220" y="790" width="280" height="390" as="geometry"/>
+      </mxCell>
+
+
+      <!-- Flow arrows -->
+      <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;exitX=0.5;exitY=1;" edge="1" source="flow-start" target="check0" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="check0" target="step1" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f2-l" value="NO" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="f2"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f2b" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="check0" target="step1-fail" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f2b-l" value="YES→compensate" style="edgeLabel;html=1;fontSize=9;fontColor=#c62828;" vertex="1" connectable="0" parent="f2b"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="step1" target="step1-ok" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f3-l" value="SUCCESS" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="f3"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f3b" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="step1" target="step1-fail" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f3b-l" value="FAIL" style="edgeLabel;html=1;fontSize=9;fontColor=#c62828;" vertex="1" connectable="0" parent="f3b"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="step1-ok" target="check1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="f5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="check1" target="step2" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f5-l" value="NO" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="f5"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="step2" target="step2-ok" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f6-l" value="SUCCESS" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="f6"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f6b" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#f57f17;strokeWidth=2;" edge="1" source="step2" target="pay-retry" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f6b-l" value="TRANSIENT" style="edgeLabel;html=1;fontSize=9;fontColor=#f57f17;" vertex="1" connectable="0" parent="f6b"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f6c" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="step2" target="pay-hard-fail" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f6c-l" value="NON-RETRYABLE" style="edgeLabel;html=1;fontSize=9;fontColor=#c62828;" vertex="1" connectable="0" parent="f6c"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="step2-ok" target="check2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="f8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="check2" target="step3" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f8-l" value="NO" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="f8"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="f9" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="step3" target="step3-ok" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f9b" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#c62828;strokeWidth=2;" edge="1" source="step3" target="ship-fail" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="f10" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="step3-ok" target="step4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="f11" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="step4" target="step5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="f12" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1b5e20;strokeWidth=2;" edge="1" source="step5" target="flow-end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    </root>
+  </mxGraphModel>
+</diagram>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 3: Event Sourcing Flow + Solace Topics                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<diagram name="LLD-3: Event Sourcing + Solace Flow" id="lld-eventsourcing">
+  <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1300" math="0" shadow="1">
+    <root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="t3" value="LLD — Event Sourcing: Write Flow, Read Flow, Snapshot, Optimistic Locking + Solace Event Streaming" style="text;html=1;fillColor=#1a1a2e;strokeColor=#1a1a2e;fontColor=#fff;fontStyle=1;fontSize=15;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="10" width="2360" height="40" as="geometry"/>
+      </mxCell>
+
+      <!-- ════════ WRITE FLOW ════════ -->
+      <mxCell id="write-title" value="WRITE FLOW (Command → Event → Persist → Solace)" style="text;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="60" width="1100" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="w1" value="1. HTTP Request arrives&#xa;POST /orders/{id}/confirm&#xa;via Kong → OrderController" style="rounded=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="20" y="110" width="180" height="70" as="geometry"/>
+      </mxCell>
+      <mxCell id="w2" value="2. Controller creates Command&#xa;ConfirmOrderCommand(orderId)&#xa;→ OrderCommandService.confirmOrder()" style="rounded=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="230" y="110" width="180" height="70" as="geometry"/>
+      </mxCell>
+      <mxCell id="w3" value="3. OrderRepository.findById()&#xa;Load snapshot (if exists)&#xa;+ replay events since snapshot&#xa;→ Order aggregate in memory" style="rounded=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="440" y="110" width="180" height="80" as="geometry"/>
+      </mxCell>
+      <mxCell id="w4" value="4. order.confirm(workflowId)&#xa;Business rules validated&#xa;OrderConfirmedEvent raised&#xa;Added to pendingEvents[]&#xa;State updated in memory" style="rounded=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="650" y="110" width="180" height="90" as="geometry"/>
+      </mxCell>
+      <mxCell id="w5" value="5. OrderRepository.save(order)&#xa;drainPendingEvents()&#xa;expectedVer = version - events.count&#xa;EventStore.appendEvents()" style="rounded=1;fillColor=#ede7f6;strokeColor=#4527a0;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="860" y="110" width="180" height="80" as="geometry"/>
+      </mxCell>
+
+      <!-- EventStore INSERT detail -->
+      <mxCell id="w6" value="6. SQL INSERT INTO event_store&#xa;(event_id, aggregate_id, event_type,&#xa; version, payload::jsonb, timestamp)&#xa;&#xa;UNIQUE(aggregate_id, version)&#xa;DuplicateKeyException&#xa;  → OptimisticLockingException" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#01579b;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="860" y="230" width="180" height="160" as="geometry"/>
+      </mxCell>
+
+      <!-- Snapshot check -->
+      <mxCell id="w7" value="7. version % 50 == 0?&#xa;YES → SaveSnapshot&#xa;INSERT/UPDATE order_snapshots&#xa;(full state as JSONB)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="1070" y="230" width="200" height="110" as="geometry"/>
+      </mxCell>
+
+      <!-- Solace publish -->
+      <mxCell id="w8" value="8a. @TransactionalEventListener(AFTER_COMMIT)&#xa;OrderEventSolacePublisher&#xa;jmsTemplate.convertAndSend(&quot;order.events&quot;, event)&#xa;Key=orderId → same order → ordered&#xa;&#xa;OUTBOX PATTERN:&#xa;DB commit first, then Solace publish.&#xa;Prevents dual-write problem." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#6a1b9a;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="860" y="420" width="300" height="160" as="geometry"/>
+      </mxCell>
+
+      <!-- Projection update step -->
+      <mxCell id="w9" value="8b. @TransactionalEventListener(AFTER_COMMIT)&#xa;OrderProjectionUpdater&#xa;@Transactional(REQUIRES_NEW)&#xa;&#xa;SQL: UPDATE order_summary SET status=...&#xa;     (or INSERT for OrderCreatedEvent)&#xa;&#xa;RUNS AFTER both 8a fires.&#xa;Separate TX — if it fails, event_store&#xa;still has the event. Projection is&#xa;rebuildable from event_store." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="860" y="600" width="300" height="160" as="geometry"/>
+      </mxCell>
+      <mxCell id="wf8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#7b1fa2;strokeWidth=2;dashed=1;" edge="1" source="w6" target="w9" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf8-l" value="AFTER_COMMIT REQUIRES_NEW" style="edgeLabel;html=1;fontSize=8;fontColor=#7b1fa2;" vertex="1" connectable="0" parent="wf8"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+
+      <!-- ════════ READ FLOW ════════ -->
+      <mxCell id="read-title" value="READ FLOW — Two Paths:  (A) GET /orders/{id} → event replay   |   (B) GET /orders → order_summary projection (no replay)" style="text;html=1;fillColor=#01579b;strokeColor=#01579b;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="640" width="1100" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="r1" value="GET /orders/{id}&#xa;OrderQueryService.getOrder()" style="rounded=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="20" y="695" width="160" height="60" as="geometry"/>
+      </mxCell>
+      <mxCell id="r2" value="OrderRepository.findById()&#xa;1. eventStore.exists(id)?&#xa;   NO → return empty" style="rounded=1;fillColor=#ede7f6;strokeColor=#4527a0;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="210" y="695" width="160" height="70" as="geometry"/>
+      </mxCell>
+      <mxCell id="r3" value="snapshotStore.loadLatestSnapshot(id)&#xa;Snapshot exists?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;" vertex="1" parent="1">
+        <mxGeometry x="400" y="685" width="200" height="90" as="geometry"/>
+      </mxCell>
+      <mxCell id="r4a" value="YES (fast path):&#xa;Restore order from snapshot&#xa;eventStore.loadEvents(id, snap.version)&#xa;Apply only events since snapshot&#xa;Max 50 events replayed" style="rounded=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="640" y="670" width="180" height="100" as="geometry"/>
+      </mxCell>
+      <mxCell id="r4b" value="NO (slow path):&#xa;eventStore.loadEvents(id, 0)&#xa;All events from the start&#xa;Order.reconstitute(allEvents)" style="rounded=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="640" y="795" width="180" height="90" as="geometry"/>
+      </mxCell>
+      <mxCell id="r5" value="Order aggregate in memory&#xa;Map to OrderResponse DTO&#xa;via MapStruct → return" style="rounded=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="860" y="720" width="160" height="70" as="geometry"/>
+      </mxCell>
+
+      <!-- ════════ OPTIMISTIC LOCKING DETAIL ════════ -->
+      <mxCell id="opt-lock-title" value="OPTIMISTIC LOCKING DETAIL" style="text;html=1;fillColor=#b71c1c;strokeColor=#b71c1c;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="1160" y="60" width="450" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="opt-lock" value="Two levels of optimistic locking:&#xa;&#xa;LEVEL 1 — Application check:&#xa;  expectedVersion = order.version - newEvents.count&#xa;  currentVersion  = eventStore.getCurrentVersion(id)&#xa;  if current ≠ expected → throw OptimisticLockingException&#xa;  (fast fail before touching DB)&#xa;&#xa;LEVEL 2 — Database constraint:&#xa;  UNIQUE INDEX (aggregate_id, version)&#xa;  If concurrent write already inserted same version:&#xa;  DuplicateKeyException → OptimisticLockingException&#xa;  (safety net even if app check is bypassed)&#xa;&#xa;Timeline example:&#xa;  T1: Load order at v=5&#xa;  T2: Load order at v=5 (concurrent)&#xa;  T1: Save → writes v=6 ✅&#xa;  T2: Save → DB has v=6, expected v=5 ❌&#xa;      → OptimisticLockingException&#xa;      → Client should retry with fresh load" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#b71c1c;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1160" y="110" width="430" height="380" as="geometry"/>
+      </mxCell>
+
+      <!-- ════════ EVENT STORE SCHEMA ════════ -->
+      <mxCell id="es-schema" value="event_store TABLE  (write model — append only)&#xa;&#xa;id              BIGSERIAL PK&#xa;event_id        UUID UNIQUE&#xa;aggregate_id    VARCHAR(255)&#xa;aggregate_type  VARCHAR(100)  — 'Order'&#xa;event_type      VARCHAR(200)  — 'OrderConfirmedEvent'&#xa;version         BIGINT        — sequential per aggregate&#xa;payload         JSONB         — full event + @type discriminator&#xa;metadata        JSONB         — correlationId, etc.&#xa;timestamp       TIMESTAMPTZ   — domain event time (not DB time)&#xa;created_at      TIMESTAMPTZ   — DB insert time&#xa;&#xa;UNIQUE INDEX (aggregate_id, version) ← opt. lock&#xa;INDEX (aggregate_id)                 ← fast load&#xa;INDEX (event_type)                   ← analytics&#xa;INDEX (timestamp)                    ← time queries&#xa;&#xa;────────────────────────────────────&#xa;order_summary TABLE  (CQRS read model — V3 migration)&#xa;&#xa;Maintained by OrderProjectionUpdater&#xa;@TransactionalEventListener(AFTER_COMMIT) + REQUIRES_NEW&#xa;&#xa;Queried by GET /orders  (status, customerId, pagination)&#xa;Never queried for single-order reads (use event_store for those)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#01579b;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1160" y="520" width="430" height="340" as="geometry"/>
+      </mxCell>
+
+      <!-- ════════ SOLACE TOPICS ════════ -->
+      <mxCell id="kafka-title" value="SOLACE TOPICS AND QUEUE SUBSCRIPTIONS" style="text;html=1;fillColor=#4a148c;strokeColor=#4a148c;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="1650" y="60" width="700" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="kafka-topics" value="Topic: order.events&#xa;  Published by: order-service (after every DomainEvent persist)&#xa;  Key: orderId → guaranteed ordering per order&#xa;  Consumers: notification-service-queue&#xa;  Schema: DomainEvent (polymorphic JSON)&#xa;  Guaranteed messaging (dev &amp; prod)&#xa;&#xa;Topic: inventory.events&#xa;  Published by: inventory-service&#xa;  Key: orderId&#xa;  Consumers: notification-service-queue&#xa;  Schema: InventoryEventDto&#xa;&#xa;Topic: payment.events&#xa;  Published by: payment-service&#xa;  Key: orderId&#xa;  Consumers: notification-service-queue&#xa;  Schema: PaymentEventDto&#xa;&#xa;Topic: shipping.events&#xa;  Published by: shipping-service&#xa;  Key: orderId&#xa;  Consumers: notification-service-queue&#xa;             order-service-queue (delivery confirm)&#xa;  Schema: ShippingEventDto&#xa;&#xa;Topic: notification.requests&#xa;  Published by: order-service (via NotificationActivity)&#xa;  Key: orderId&#xa;  Consumers: notification-service-queue&#xa;  Schema: NotificationRequestDto" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1650" y="110" width="390" height="560" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="kafka-idempotency" value="IDEMPOTENT CONSUMERS&#xa;&#xa;Each Solace consumer:&#xa;1. Reads eventId (UUID) from message&#xa;2. Checks processed_events table (or Redis)&#xa;3. If already processed → skip (no duplicate action)&#xa;4. If new → process + record eventId&#xa;&#xa;WHY NEEDED:&#xa;Solace guaranteed messaging is at-least-once.&#xa;Consumer may process same message twice&#xa;after a crash or queue redelivery.&#xa;Idempotency prevents duplicate emails,&#xa;double-charging, etc.&#xa;&#xa;Queue:&#xa;notification-service-queue&#xa;  — durable queue, one logical consumer&#xa;  — automatic redelivery on crash/reconnect" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#4a148c;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="1650" y="690" width="390" height="370" as="geometry"/>
+      </mxCell>
+
+      <!-- Write flow arrows -->
+      <mxCell id="wf1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="w1" target="w2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="w2" target="w3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="w3" target="w4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="w4" target="w5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#01579b;strokeWidth=2;" edge="1" source="w5" target="w6" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#f57f17;strokeWidth=2;dashed=1;" edge="1" source="w5" target="w7" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2;dashed=1;" edge="1" source="w6" target="w8" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="wf7-l" value="AFTER_COMMIT" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;" vertex="1" connectable="0" parent="wf7"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <!-- Read flow arrows -->
+      <mxCell id="rf1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="r1" target="r2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="rf2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="r2" target="r3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="rf3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;" edge="1" source="r3" target="r4a" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="rf3-l" value="YES" style="edgeLabel;html=1;fontSize=9;fontColor=#2e7d32;" vertex="1" connectable="0" parent="rf3"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="rf4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#f57f17;strokeWidth=2;" edge="1" source="r3" target="r4b" parent="1">
+        <mxGeometry relative="1" as="geometry"/>
+      </mxCell>
+      <mxCell id="rf4-l" value="NO" style="edgeLabel;html=1;fontSize=9;fontColor=#f57f17;" vertex="1" connectable="0" parent="rf4"><mxGeometry relative="0.5" as="geometry"/></mxCell>
+      <mxCell id="rf5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="r4a" target="r5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="rf6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333;strokeWidth=2;" edge="1" source="r4b" target="r5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      <!-- ════════ PROJECTION READ PATH (Path B: GET /orders) ════════ -->
+      <mxCell id="proj-read-title" value="PATH B — GET /orders  (CQRS Projection — no event replay)" style="text;html=1;fillColor=#7b1fa2;strokeColor=#7b1fa2;fontColor=#fff;fontStyle=1;fontSize=11;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="920" width="1100" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="pb1" value="GET /orders?status=DELIVERED&#xa;&amp;customerId=xxx&amp;page=0&amp;size=20&#xa;OrderQueryService.listOrders()" style="rounded=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="20" y="970" width="180" height="80" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="pb2" value="OrderSummaryRepository.findAll()&#xa;&#xa;SELECT * FROM order_summary&#xa;WHERE 1=1&#xa;  [AND status IN (:statuses)]&#xa;  [AND customer_id = :customerId]&#xa;ORDER BY created_at DESC&#xa;LIMIT :size OFFSET :page*size" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#01579b;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="230" y="960" width="230" height="120" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="pb3" value="Page&lt;OrderSummaryResponse&gt;&#xa;&#xa;totalElements, totalPages,&#xa;content: [{ orderId, customerId,&#xa;  status, paymentStatus,&#xa;  shipmentStatus, totalAmount,&#xa;  itemCount, trackingNumber,&#xa;  createdAt, deliveredAt, ... }]&#xa;&#xa;No aggregate loaded.&#xa;No event replay.&#xa;Sub-millisecond regardless&#xa;of per-order event count." style="rounded=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontSize=9;whiteSpace=wrap;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="500" y="960" width="220" height="160" as="geometry"/>
+      </mxCell>
+
+      <!-- How projection is populated -->
+      <mxCell id="pb4" value="How order_summary stays current:&#xa;&#xa;1. Any command completes&#xa;   (createOrder, confirmOrder, etc.)&#xa;&#xa;2. OrderRepositoryAdapter.save(order)&#xa;   → publishEvent(DomainEvent) ×N&#xa;&#xa;3. Main @Transactional commits&#xa;   event_store rows are durable&#xa;&#xa;4. @TransactionalEventListener&#xa;   (AFTER_COMMIT) fires&#xa;&#xa;5. OrderProjectionUpdater.on(event)&#xa;   runs in @Transactional(REQUIRES_NEW)&#xa;   → UPDATE order_summary atomically&#xa;&#xa;Result: projection reflects every command&#xa;within the same request cycle." style="rounded=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=9;align=left;spacingLeft=8;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxGeometry x="760" y="940" width="260" height="280" as="geometry"/>
+      </mxCell>
+
+      <!-- Path B arrows -->
+      <mxCell id="pbf1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#7b1fa2;strokeWidth=2;" edge="1" source="pb1" target="pb2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      <mxCell id="pbf2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#7b1fa2;strokeWidth=2;" edge="1" source="pb2" target="pb3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    </root>
+  </mxGraphModel>
+</diagram>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PAGE 4: All Microservices Internal Structure + Kong Configuration  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<diagram name="LLD-4: All Services + Kong Config" id="lld-services">
+  <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1400" math="0" shadow="1">
+    <root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="t4" value="LLD — All Microservices Internal Design + Kong API Gateway Configuration" style="text;html=1;fillColor=#1a1a2e;strokeColor=#1a1a2e;fontColor=#fff;fontStyle=1;fontSize=15;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="10" width="2360" height="40" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── KONG GATEWAY ────── -->
+      <mxCell id="kong-title" value="Kong API Gateway (DB-Full mode)" style="text;html=1;fillColor=#003d5b;strokeColor=#003d5b;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="60" width="500" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="kong-internal" value="Kong Container — :8000 proxy, :8001 admin&#xa;Config: kong.yml (DB-Full mode via Konga)&#xa;&#xa;SERVICES configured:&#xa;  order-service   → http://order-service:8080&#xa;  inventory-svc   → http://inventory-service:8081&#xa;  payment-svc     → http://payment-service:8082&#xa;  shipping-svc    → http://shipping-service:8083&#xa;&#xa;ROUTES:&#xa;  POST /orders           → order-service&#xa;  GET  /orders/{id}      → order-service&#xa;  GET  /orders/{id}/*    → order-service&#xa;  GET  /workflows/*      → order-service&#xa;  POST /workflows/*      → order-service&#xa;  *    /inventory/*      → inventory-svc&#xa;  *    /payments/*       → payment-svc&#xa;  *    /shipping/*       → shipping-svc&#xa;&#xa;GLOBAL PLUGINS:&#xa;  correlation-id: header=X-Correlation-ID&#xa;  prometheus: expose /metrics&#xa;  http-log: log all requests&#xa;&#xa;ROUTE-LEVEL PLUGINS:&#xa;  rate-limiting: 100 req/min per IP (all routes)&#xa;  proxy-cache: TTL 60s, GET only (order-service)&#xa;  request-transformer: add X-Forwarded-By=kong" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#003d5b;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="20" y="100" width="500" height="460" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="konga-detail" value="Konga Admin UI :1337&#xa;&#xa;• Visual Kong configuration&#xa;• Manage routes, services, plugins&#xa;• Consumer and API key management&#xa;• Health check dashboard&#xa;• Traffic analytics&#xa;&#xa;Connects to Kong Admin API :8001" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#003d5b;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="20" y="580" width="500" height="160" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── INVENTORY SERVICE ────── -->
+      <mxCell id="inv-title" value="inventory-service :8081" style="text;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="560" y="60" width="400" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="inv-internal" value="Spring Boot 3.x  |  Port: 8081&#xa;&#xa;REST API:&#xa;  POST   /reserve&#xa;    Body: {orderId, items[]}&#xa;    Returns: {reservationId, status}&#xa;    Failure rate: simulation.inventory-failure-rate&#xa;&#xa;  DELETE /reserve/{reservationId}&#xa;    (compensation — release reserved stock)&#xa;    Returns: 200 OK&#xa;&#xa;  GET /health (actuator)&#xa;&#xa;Domain:&#xa;  InventoryItem: productId, quantity, reserved&#xa;  Reservation: id, orderId, items, status, createdAt&#xa;&#xa;Persistence (inventorydb :5434):&#xa;  inventory_items table&#xa;  reservations table&#xa;  outbox_events table (Solace outbox pattern)&#xa;&#xa;Solace:&#xa;  Publishes to: inventory.events&#xa;  Event types: InventoryReserved, InventoryReleased&#xa;  Key: orderId&#xa;&#xa;Failure simulation:&#xa;  SimulationProperties.inventoryFailureRate&#xa;  Throws RuntimeException (retryable by Temporal)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="560" y="100" width="400" height="490" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── PAYMENT SERVICE ────── -->
+      <mxCell id="pay-title" value="payment-service :8082" style="text;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="1000" y="60" width="400" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="pay-internal" value="Spring Boot 3.x  |  Port: 8082&#xa;&#xa;REST API:&#xa;  POST /charge&#xa;    Body: {orderId, amount, currency}&#xa;    Returns: {transactionId, status}&#xa;    Failure types:&#xa;      - Transient (RuntimeException) → retryable&#xa;      - InsufficientFundsException   → NON-retryable&#xa;      - CardDeclinedException        → NON-retryable&#xa;&#xa;  POST /refund&#xa;    Body: {transactionId, amount}&#xa;    Returns: {refundId, status}&#xa;    (Idempotent by transactionId)&#xa;&#xa;Domain:&#xa;  Transaction: id, orderId, amount, status, createdAt&#xa;  Refund: id, transactionId, amount, status&#xa;&#xa;Persistence (paymentdb :5435):&#xa;  transactions table&#xa;  refunds table&#xa;  outbox_events table&#xa;&#xa;Solace:&#xa;  Publishes to: payment.events&#xa;  Event types: PaymentCharged, PaymentRefunded&#xa;  Key: orderId&#xa;&#xa;Non-retryable exception types registered in&#xa;Temporal activity doNotRetry list" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1000" y="100" width="400" height="490" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── SHIPPING SERVICE ────── -->
+      <mxCell id="ship-title" value="shipping-service :8083" style="text;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="1440" y="60" width="400" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="ship-internal" value="Spring Boot 3.x  |  Port: 8083&#xa;&#xa;REST API:&#xa;  POST /shipments&#xa;    Body: {orderId, address, items[]}&#xa;    Returns: {shipmentId, trackingNumber, carrier}&#xa;    Carriers: UPS, FedEx (random)&#xa;    Failure rate: simulation.shipping-failure-rate&#xa;&#xa;  GET /shipments/{id}&#xa;    Returns: {shipmentId, status, trackingNumber}&#xa;    Used by activity for delivery confirmation&#xa;&#xa;  POST /deliveries/{shipmentId}/confirm&#xa;    (simulate carrier webhook)&#xa;&#xa;Domain:&#xa;  Shipment: id, orderId, trackingNumber, carrier, status&#xa;  Delivery: shipmentId, deliveredAt, confirmedAt&#xa;&#xa;Persistence (shippingdb :5436):&#xa;  shipments table&#xa;  deliveries table&#xa;  outbox_events table&#xa;&#xa;Solace:&#xa;  Publishes to: shipping.events&#xa;  Event types: ShipmentCreated, ShipmentDelivered&#xa;  Key: orderId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1440" y="100" width="400" height="490" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── NOTIFICATION SERVICE ────── -->
+      <mxCell id="notif-title" value="notification-service :8084" style="text;html=1;fillColor=#1b5e20;strokeColor=#1b5e20;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="1880" y="60" width="480" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="notif-internal" value="Spring Boot 3.x  |  Port: 8084&#xa;NO REST API — pure Solace consumer&#xa;&#xa;SOLACE CONSUMERS:&#xa;&#xa;OrderEventConsumer:&#xa;  Topic: order.events&#xa;  Queue: notification-service-queue&#xa;  On OrderConfirmedEvent:&#xa;    → sendOrderConfirmedEmail(orderId, customerId)&#xa;  On OrderCancelledEvent:&#xa;    → sendCancellationEmail(orderId, reason)&#xa;  On ShipmentDeliveredEvent:&#xa;    → sendDeliveryConfirmationEmail(orderId)&#xa;&#xa;PaymentEventConsumer:&#xa;  Topic: payment.events&#xa;  Queue: notification-service-queue&#xa;  On PaymentFailedEvent:&#xa;    → sendPaymentFailureEmail(orderId, reason)&#xa;  On PaymentChargedEvent:&#xa;    → sendPaymentReceiptEmail(orderId, amount)&#xa;&#xa;IDEMPOTENCY:&#xa;  Each message: check eventId in processed_events&#xa;  Redis or DB deduplication store&#xa;  TTL: 24 hours per eventId&#xa;&#xa;Notification channels (simulated):&#xa;  Email: log to console (stub)&#xa;  SMS: log to console (stub)&#xa;  In-app: log to console (stub)&#xa;&#xa;Real impl would use:&#xa;  AWS SES / SendGrid for email&#xa;  Twilio for SMS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=9;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+        <mxGeometry x="1880" y="100" width="480" height="620" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── SHARED CONTRACTS MODULE ────── -->
+      <mxCell id="shared-title" value="shared-contracts (Maven module)" style="text;html=1;fillColor=#f57f17;strokeColor=#f57f17;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="560" y="640" width="840" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="shared-detail" value="Shared library imported by all services as Maven dependency.&#xa;Contains contracts to avoid coupling services to each other's domain model.&#xa;&#xa;com.example.contracts.messaging:&#xa;  OrderEventDto (type, orderId, timestamp, payload)&#xa;  InventoryEventDto (reservationId, orderId, status)&#xa;  PaymentEventDto (transactionId, orderId, amount, status)&#xa;  ShippingEventDto (shipmentId, orderId, trackingNumber, carrier)&#xa;  NotificationRequestDto (type, orderId, customerId, data)&#xa;&#xa;com.example.contracts.api:&#xa;  ReserveInventoryRequest / ReserveInventoryResponse&#xa;  ChargePaymentRequest / ChargePaymentResponse&#xa;  RefundPaymentRequest / RefundPaymentResponse&#xa;  CreateShipmentRequest / CreateShipmentResponse&#xa;&#xa;All DTOs are Jackson records — immutable, serializable.&#xa;Versioned: breaking changes require a new DTO version." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxGeometry x="560" y="680" width="840" height="310" as="geometry"/>
+      </mxCell>
+
+      <!-- ────── MAVEN MODULE STRUCTURE ────── -->
+      <mxCell id="maven-title" value="Maven Multi-Module Structure" style="text;html=1;fillColor=#4527a0;strokeColor=#4527a0;fontColor=#fff;fontStyle=1;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxGeometry x="20" y="790" width="500" height="30" as="geometry"/>
+      </mxCell>
+
+      <mxCell id="maven-detail" value="order-management/   (parent pom — BOM)&#xa;├── shared-contracts/    :jar (no Spring Boot)&#xa;│     Messaging DTOs, API contracts&#xa;│     No business logic&#xa;│&#xa;├── order-service/      :jar (Spring Boot)&#xa;│     Depends on: shared-contracts&#xa;│     Domain, Event Store, Temporal Worker&#xa;│&#xa;├── inventory-service/  :jar (Spring Boot)&#xa;│     Depends on: shared-contracts&#xa;│&#xa;├── payment-service/    :jar (Spring Boot)&#xa;│     Depends on: shared-contracts&#xa;│&#xa;├── shipping-service/   :jar (Spring Boot)&#xa;│     Depends on: shared-contracts&#xa;│&#xa;├── notification-service/:jar (Spring Boot)&#xa;│     Depends on: shared-contracts&#xa;│&#xa;└── docker/&#xa;      docker-compose.yml (all services + infra)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ede7f6;strokeColor=#4527a0;fontSize=9;align=left;spacingLeft=8;fontFamily=monospace;" vertex="1" parent="1">
+        <mxGeometry x="20" y="830" width="500" height="450" as="geometry"/>
+      </mxCell>
+
+    </root>
+  </mxGraphModel>
+</diagram>
+</mxfile>

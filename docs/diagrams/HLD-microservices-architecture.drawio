@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" version="21.0.0" type="device">
+  <diagram name="HLD - Microservices + Kong + Solace + Temporal" id="hld-main">
+    <mxGraphModel dx="1800" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1200" math="0" shadow="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- TITLE BAR -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <mxCell id="title-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="2160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="title" value="Order Management System — HLD: Kong API Gateway + Microservices + Temporal Workflows + Solace PubSub+" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="2160" height="45" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- ZONE BACKGROUNDS -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <!-- Zone 1: Client -->
+        <mxCell id="zone-client" value="CLIENT" style="text;html=1;strokeColor=#bdbdbd;fillColor=#f5f5f5;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#616161;" vertex="1" parent="1">
+          <mxGeometry x="20" y="65" width="150" height="1100" as="geometry" />
+        </mxCell>
+
+        <!-- Zone 2: Kong Gateway -->
+        <mxCell id="zone-kong" value="KONG API GATEWAY" style="text;html=1;strokeColor=#003d5b;fillColor=#e3f2fd;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#003d5b;" vertex="1" parent="1">
+          <mxGeometry x="185" y="65" width="250" height="1100" as="geometry" />
+        </mxCell>
+
+        <!-- Zone 3: Microservices -->
+        <mxCell id="zone-svc" value="MICROSERVICES" style="text;html=1;strokeColor=#1b5e20;fillColor=#e8f5e9;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#1b5e20;" vertex="1" parent="1">
+          <mxGeometry x="450" y="65" width="700" height="1100" as="geometry" />
+        </mxCell>
+
+        <!-- Zone 4: Temporal -->
+        <mxCell id="zone-temporal" value="TEMPORAL ORCHESTRATION" style="text;html=1;strokeColor=#e65100;fillColor=#fff3e0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#e65100;" vertex="1" parent="1">
+          <mxGeometry x="1165" y="65" width="290" height="1100" as="geometry" />
+        </mxCell>
+
+        <!-- Zone 5: Solace -->
+        <mxCell id="zone-kafka" value="EVENT STREAMING (SOLACE)" style="text;html=1;strokeColor=#4a148c;fillColor=#f3e5f5;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#4a148c;" vertex="1" parent="1">
+          <mxGeometry x="1470" y="65" width="290" height="1100" as="geometry" />
+        </mxCell>
+
+        <!-- Zone 6: Data -->
+        <mxCell id="zone-data" value="DATA STORES" style="text;html=1;strokeColor=#01579b;fillColor=#e1f5fe;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;rotatable=0;fontSize=11;fontStyle=1;fontColor=#01579b;" vertex="1" parent="1">
+          <mxGeometry x="1775" y="65" width="395" height="1100" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- CLIENT COMPONENTS -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <mxCell id="browser" value="🌐 Web Browser&#xa;/ Mobile App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="35" y="160" width="120" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="swagger" value="📋 Swagger UI&#xa;:8080/swagger-ui" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="35" y="260" width="120" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="curl-client" value="⚙ CLI / curl&#xa;/ Postman" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="35" y="345" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- KONG API GATEWAY -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <!-- Kong main box -->
+        <mxCell id="kong-main" value="🦍 Kong Gateway&#xa;:8000 (proxy)&#xa;:8001 (admin API)&#xa;:8002 (Konga UI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#003d5b;strokeColor=#003d5b;fontStyle=1;fontSize=11;fontColor=#ffffff;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="200" y="140" width="210" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Kong Routes -->
+        <mxCell id="kong-routes" value="📌 Routes&#xa;&#xa;POST /orders/*    → order-svc:8080&#xa;GET  /orders/*    → order-svc:8080&#xa;GET  /workflows/* → order-svc:8080&#xa;*    /inventory/*  → inv-svc:8081&#xa;*    /payments/*   → pay-svc:8082&#xa;*    /shipping/*   → ship-svc:8083" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#003d5b;fontSize=8;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="255" width="210" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- Kong Plugins -->
+        <mxCell id="kong-plugins" value="🔌 Active Plugins&#xa;&#xa;✓ correlation-id&#xa;✓ rate-limiting (100 req/min)&#xa;✓ proxy-cache (GET 60s)&#xa;✓ prometheus (/metrics)&#xa;✓ request-transformer&#xa;✓ http-log" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=8;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="420" width="210" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- Konga UI -->
+        <mxCell id="konga" value="🖥 Konga Admin UI&#xa;:1337&#xa;&#xa;Visual route manager&#xa;Plugin config UI&#xa;Consumer management&#xa;Traffic analytics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#003d5b;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="200" y="590" width="210" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Kong DB -->
+        <mxCell id="kong-db" value="🗄 Kong PostgreSQL&#xa;:5440&#xa;(routes, plugins,&#xa;consumers config)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#003d5b;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="200" y="730" width="210" height="90" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- MICROSERVICES -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <!-- Order Service — the biggest, most complex -->
+        <mxCell id="order-svc" value="📦 order-service  :8080&#xa;&#xa;REST API + Temporal Worker&#xa;Event Sourcing + CQRS&#xa;Hexagonal Architecture (inbound ports)&#xa;Saga Orchestrator&#xa;Solace Producer → order.events&#xa;Swagger UI at /swagger-ui&#xa;&#xa;Write: event_store (append-only JSONB)&#xa;Read:  order_summary projection (CQRS)&#xa;GET /orders — status/customerId filter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;arcSize=5;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="465" y="120" width="195" height="165" as="geometry" />
+        </mxCell>
+
+        <!-- Inventory Service -->
+        <mxCell id="inv-svc" value="🏭 inventory-service  :8081&#xa;&#xa;REST: POST /reserve&#xa;REST: DELETE /reserve/{id}&#xa;Own PostgreSQL (inventorydb)&#xa;Solace Producer → inventory.events&#xa;Configurable failure rate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;arcSize=5;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="120" width="195" height="155" as="geometry" />
+        </mxCell>
+
+        <!-- Payment Service -->
+        <mxCell id="pay-svc" value="💳 payment-service  :8082&#xa;&#xa;REST: POST /charge&#xa;REST: POST /refund&#xa;Own PostgreSQL (paymentdb)&#xa;Solace Producer → payment.events&#xa;InsufficientFunds (non-retryable)&#xa;CardDeclined (non-retryable)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;arcSize=5;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="310" width="195" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Shipping Service -->
+        <mxCell id="ship-svc" value="🚚 shipping-service  :8083&#xa;&#xa;REST: POST /shipments&#xa;REST: GET /shipments/{id}&#xa;REST: POST /deliveries&#xa;Own PostgreSQL (shippingdb)&#xa;Solace Producer → shipping.events&#xa;Carrier simulation (UPS/FedEx)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;arcSize=5;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="525" width="195" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Notification Service -->
+        <mxCell id="notif-svc" value="🔔 notification-service  :8084&#xa;&#xa;No REST API exposed&#xa;Pure Solace consumer&#xa;Consumes: order.events&#xa;Consumes: payment.events&#xa;Consumes: shipping.events&#xa;Email / SMS (simulated logs)&#xa;Idempotent — dedup by eventId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontStyle=1;fontSize=9;arcSize=5;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="740" width="195" height="185" as="geometry" />
+        </mxCell>
+
+        <!-- Shared Contracts -->
+        <mxCell id="shared-contracts" value="📐 shared-contracts&#xa;(Maven module)&#xa;&#xa;• Solace event DTOs&#xa;• Common exceptions&#xa;• API contracts (OpenAPI)" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f9a825;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="900" y="430" width="165" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Activity Notes -->
+        <mxCell id="activity-note" value="⚡ Temporal Activities&#xa;(inside order-service worker)&#xa;&#xa;InventoryActivity → HTTP → inv-svc&#xa;PaymentActivity   → HTTP → pay-svc&#xa;ShippingActivity  → HTTP → ship-svc&#xa;NotificationActivity → Solace pub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="465" y="340" width="195" height="135" as="geometry" />
+        </mxCell>
+
+        <!-- Outbox Pattern Note -->
+        <mxCell id="outbox-note" value="📬 Outbox Pattern&#xa;&#xa;Events written to DB first&#xa;then published to Solace.&#xa;Prevents dual-write problem.&#xa;Guarantees at-least-once." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="465" y="510" width="195" height="115" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- TEMPORAL ZONE -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="temporal-server" value="⏱ Temporal Server&#xa;:7233 (gRPC)&#xa;:7234 (metrics)&#xa;&#xa;Workflow history store&#xa;Task queue routing&#xa;Retry / timeout manager&#xa;At-least-once guarantee" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontStyle=1;fontSize=9;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="1185" y="120" width="230" height="145" as="geometry" />
+        </mxCell>
+
+        <mxCell id="workflow-box" value="🔄 OrderFulfillmentWorkflow&#xa;(hosted in order-service worker)&#xa;&#xa;Steps:&#xa;1. Reserve Inventory (HTTP)&#xa;2. Process Payment (HTTP)&#xa;3. Create Shipment (HTTP)&#xa;4. Await Delivery&#xa;&#xa;Signals: cancelOrder, retryPayment&#xa;Queries: status, progress&#xa;&#xa;Saga: compensates on failure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;arcSize=5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1185" y="295" width="230" height="220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="temporal-ui" value="🖥 Temporal Web UI&#xa;:8088&#xa;&#xa;Workflow visualizer&#xa;Activity history&#xa;Signal/Query UI&#xa;Replay debugger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1185" y="550" width="230" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="temporal-pg" value="🗄 Temporal PostgreSQL&#xa;:5433&#xa;(Temporal's own DB —&#xa;workflow execution history,&#xa;task queues, timers, signals)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1185" y="710" width="230" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- SOLACE ZONE -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="zookeeper" value="⚠ No Coordination Service Needed&#xa;(Solace PubSub+ is a single broker —&#xa;no Zookeeper/KRaft required)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#6a1b9a;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="120" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="kafka-broker" value="📨 Solace PubSub+ :55555&#xa;&#xa;Topics:&#xa;  order.events&#xa;  inventory.events&#xa;  payment.events&#xa;  shipping.events&#xa;  notification.requests&#xa;&#xa;Topic-based pub/sub&#xa;Guaranteed messaging (dev)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ce93d8;strokeColor=#6a1b9a;fontStyle=1;fontSize=9;arcSize=5;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="205" width="230" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="kafka-ui" value="🖥 Solace PubSub+ Manager :8085&#xa;&#xa;Topic browser&#xa;Queue depth &amp; flow monitor&#xa;Message inspector&#xa;Produce test messages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#6a1b9a;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="450" width="230" height="115" as="geometry" />
+        </mxCell>
+
+        <mxCell id="consumer-groups" value="👥 Queue Subscriptions&#xa;&#xa;notification-service-queue&#xa;  ← order.events&#xa;  ← payment.events&#xa;  ← shipping.events&#xa;&#xa;order-service-queue&#xa;  ← shipping.events (delivery)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#6a1b9a;fontSize=9;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1490" y="600" width="230" height="165" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- DATA STORES ZONE -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <mxCell id="db-order" value="🗄 orderdb :5432&#xa;&#xa;event_store (append-only)&#xa;order_snapshots&#xa;&#xa;JSONB events, optimistic lock&#xa;snapshot every 50 events" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#0277bd;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="120" width="185" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-inventory" value="🗄 inventorydb :5434&#xa;&#xa;inventory_items&#xa;reservations&#xa;outbox_events" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#0277bd;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="275" width="185" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-payment" value="🗄 paymentdb :5435&#xa;&#xa;transactions&#xa;refunds&#xa;outbox_events" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#0277bd;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="410" width="185" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-shipping" value="🗄 shippingdb :5436&#xa;&#xa;shipments&#xa;deliveries&#xa;outbox_events" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b3e5fc;strokeColor=#0277bd;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="545" width="185" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-temporal" value="🗄 temporal-pg :5433&#xa;&#xa;Temporal's internal DB&#xa;Workflow exec history&#xa;Task queues, timers" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="680" width="185" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-kong" value="🗄 kong-pg :5440&#xa;&#xa;Routes, services&#xa;Plugins config&#xa;Consumers, keys" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#003d5b;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="815" width="185" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Prometheus + Grafana -->
+        <mxCell id="prometheus" value="📊 Prometheus :9090&#xa;Scrapes: Kong /metrics&#xa;All services /actuator/prometheus&#xa;Temporal :7234" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#c62828;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1795" y="950" width="185" height="90" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- CONNECTIONS -->
+        <!-- ══════════════════════════════════════════════════════ -->
+
+        <!-- Client → Kong -->
+        <mxCell id="e-browser-kong" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1565c0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.3;" edge="1" source="browser" target="kong-main" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-browser-kong-lbl" value="HTTPS :8000" style="edgeLabel;html=1;fontSize=8;fontStyle=1;" vertex="1" connectable="0" parent="e-browser-kong">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-curl-kong" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1565c0;strokeWidth=2;" edge="1" source="curl-client" target="kong-main" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Kong → Order Service -->
+        <mxCell id="e-kong-order" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#003d5b;strokeWidth=2.5;exitX=1;exitY=0.3;entryX=0;entryY=0.3;" edge="1" source="kong-main" target="order-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kong-order-lbl" value="/orders/* /workflows/*" style="edgeLabel;html=1;fontSize=8;fontStyle=1;fontColor=#003d5b;" vertex="1" connectable="0" parent="e-kong-order">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Kong → Inventory Service -->
+        <mxCell id="e-kong-inv" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#003d5b;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.3;" edge="1" source="kong-routes" target="inv-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kong-inv-lbl" value="/inventory/*" style="edgeLabel;html=1;fontSize=8;fontColor=#003d5b;" vertex="1" connectable="0" parent="e-kong-inv">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Kong → Payment Service -->
+        <mxCell id="e-kong-pay" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#003d5b;strokeWidth=2;exitX=1;exitY=0.6;entryX=0;entryY=0.3;" edge="1" source="kong-routes" target="pay-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kong-pay-lbl" value="/payments/*" style="edgeLabel;html=1;fontSize=8;fontColor=#003d5b;" vertex="1" connectable="0" parent="e-kong-pay">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Kong → Shipping Service -->
+        <mxCell id="e-kong-ship" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#003d5b;strokeWidth=2;exitX=1;exitY=0.75;entryX=0;entryY=0.3;" edge="1" source="kong-routes" target="ship-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kong-ship-lbl" value="/shipping/*" style="edgeLabel;html=1;fontSize=8;fontColor=#003d5b;" vertex="1" connectable="0" parent="e-kong-ship">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Order Service → Temporal (gRPC) -->
+        <mxCell id="e-order-temporal" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#e65100;strokeWidth=2.5;dashed=0;exitX=1;exitY=0.3;entryX=0;entryY=0.3;" edge="1" source="order-svc" target="temporal-server" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-order-temporal-lbl" value="gRPC :7233&#xa;start/signal/query" style="edgeLabel;html=1;fontSize=8;fontStyle=1;fontColor=#e65100;" vertex="1" connectable="0" parent="e-order-temporal">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Temporal → Activity (order service worker polls) -->
+        <mxCell id="e-temporal-workflow" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#e65100;strokeWidth=2;dashed=1;" edge="1" source="temporal-server" target="workflow-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-temporal-workflow-lbl" value="routes tasks&#xa;to worker" style="edgeLabel;html=1;fontSize=8;" vertex="1" connectable="0" parent="e-temporal-workflow">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Activity → Inventory HTTP -->
+        <mxCell id="e-act-inv" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="activity-note" target="inv-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-act-inv-lbl" value="HTTP POST /reserve" style="edgeLabel;html=1;fontSize=8;fontColor=#2e7d32;" vertex="1" connectable="0" parent="e-act-inv">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Activity → Payment HTTP -->
+        <mxCell id="e-act-pay" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;exitX=1;exitY=0.7;entryX=0;entryY=0.3;" edge="1" source="activity-note" target="pay-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-act-pay-lbl" value="HTTP POST /charge" style="edgeLabel;html=1;fontSize=8;fontColor=#2e7d32;" vertex="1" connectable="0" parent="e-act-pay">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Activity → Shipping HTTP -->
+        <mxCell id="e-act-ship" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#2e7d32;strokeWidth=2;exitX=1;exitY=0.9;entryX=0;entryY=0.3;" edge="1" source="activity-note" target="ship-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-act-ship-lbl" value="HTTP POST /shipments" style="edgeLabel;html=1;fontSize=8;fontColor=#2e7d32;" vertex="1" connectable="0" parent="e-act-ship">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+
+        <!-- Solace PUBLISH edges (dashed purple) -->
+        <mxCell id="e-order-kafka" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2;dashed=1;exitX=1;exitY=0.7;entryX=0;entryY=0.3;" edge="1" source="order-svc" target="kafka-broker" parent="1">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1100" y="210"/><mxPoint x="1100" y="280"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e-order-kafka-lbl" value="PUBLISH order.events" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;fontStyle=1;" vertex="1" connectable="0" parent="e-order-kafka">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-inv-kafka" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2;dashed=1;" edge="1" source="inv-svc" target="kafka-broker" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-inv-kafka-lbl" value="PUBLISH inventory.events" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;" vertex="1" connectable="0" parent="e-inv-kafka">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-pay-kafka" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2;dashed=1;" edge="1" source="pay-svc" target="kafka-broker" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-pay-kafka-lbl" value="PUBLISH payment.events" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;" vertex="1" connectable="0" parent="e-pay-kafka">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-ship-kafka" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2;dashed=1;" edge="1" source="ship-svc" target="kafka-broker" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ship-kafka-lbl" value="PUBLISH shipping.events" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;" vertex="1" connectable="0" parent="e-ship-kafka">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- Solace CONSUME edges -->
+        <mxCell id="e-kafka-notif" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6a1b9a;strokeWidth=2.5;dashed=1;exitX=0;exitY=0.6;entryX=1;entryY=0.3;" edge="1" source="kafka-broker" target="notif-svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kafka-notif-lbl" value="CONSUME all events" style="edgeLabel;html=1;fontSize=8;fontColor=#6a1b9a;fontStyle=1;" vertex="1" connectable="0" parent="e-kafka-notif">
+          <mxGeometry relative="0.5" as="geometry" />
+        </mxCell>
+
+        <!-- DB connections -->
+        <mxCell id="e-order-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#0277bd;strokeWidth=1.5;" edge="1" source="order-svc" target="db-order" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-inv-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#0277bd;strokeWidth=1.5;" edge="1" source="inv-svc" target="db-inventory" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-pay-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#0277bd;strokeWidth=1.5;" edge="1" source="pay-svc" target="db-payment" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ship-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#0277bd;strokeWidth=1.5;" edge="1" source="ship-svc" target="db-shipping" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-temporal-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#e65100;strokeWidth=1.5;" edge="1" source="temporal-server" target="temporal-pg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-kong-db" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#003d5b;strokeWidth=1.5;" edge="1" source="kong-main" target="db-kong" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- LEGEND -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <mxCell id="legend-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#9e9e9e;" vertex="1" parent="1">
+          <mxGeometry x="35" y="870" width="410" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="880" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Legend items -->
+        <mxCell id="leg-http" value="" style="endArrow=block;endFill=1;strokeColor=#003d5b;strokeWidth=3;" edge="1" parent="1">
+          <mxGeometry x="50" y="916" relative="0" as="geometry"><mxPoint x="50" y="916" as="sourcePoint"/><mxPoint x="110" y="916" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-http-lbl" value="HTTP REST (sync — Kong routes client traffic)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="908" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg-act" value="" style="endArrow=block;endFill=1;strokeColor=#2e7d32;strokeWidth=3;" edge="1" parent="1">
+          <mxGeometry x="50" y="940" relative="0" as="geometry"><mxPoint x="50" y="940" as="sourcePoint"/><mxPoint x="110" y="940" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-act-lbl" value="HTTP REST (sync — Temporal Activity calls services)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="932" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg-kafka" value="" style="endArrow=block;endFill=1;strokeColor=#6a1b9a;strokeWidth=3;dashed=1;" edge="1" parent="1">
+          <mxGeometry x="50" y="964" relative="0" as="geometry"><mxPoint x="50" y="964" as="sourcePoint"/><mxPoint x="110" y="964" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-kafka-lbl" value="Solace pub/sub (async — events, notifications)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="956" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg-grpc" value="" style="endArrow=block;endFill=1;strokeColor=#e65100;strokeWidth=3;" edge="1" parent="1">
+          <mxGeometry x="50" y="988" relative="0" as="geometry"><mxPoint x="50" y="988" as="sourcePoint"/><mxPoint x="110" y="988" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-grpc-lbl" value="gRPC (Temporal SDK — workflow start/signal/query)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="980" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg-db" value="" style="endArrow=block;endFill=1;strokeColor=#0277bd;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry x="50" y="1012" relative="0" as="geometry"><mxPoint x="50" y="1012" as="sourcePoint"/><mxPoint x="110" y="1012" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-db-lbl" value="JDBC (service-to-own-DB — no shared databases)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1004" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg-task" value="" style="endArrow=block;endFill=1;strokeColor=#e65100;strokeWidth=2;dashed=1;" edge="1" parent="1">
+          <mxGeometry x="50" y="1036" relative="0" as="geometry"><mxPoint x="50" y="1036" as="sourcePoint"/><mxPoint x="110" y="1036" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="leg-task-lbl" value="Temporal task routing (workflow → worker)" style="text;html=1;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1028" width="280" height="16" as="geometry" />
+        </mxCell>
+
+        <!-- PORT SUMMARY -->
+        <mxCell id="ports-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#9e9e9e;" vertex="1" parent="1">
+          <mxGeometry x="465" y="870" width="360" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="ports-title" value="PORT REFERENCE" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="480" y="880" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ports-content" value=":80     → Kong proxy (client entry point)&#xa;:8000   → Kong proxy (direct)&#xa;:8001   → Kong admin API&#xa;:1337   → Konga UI&#xa;:8080   → order-service&#xa;:8081   → inventory-service&#xa;:8082   → payment-service&#xa;:8083   → shipping-service&#xa;:8084   → notification-service&#xa;:8088   → Temporal UI&#xa;:8085   → Solace PubSub+ Manager&#xa;:55555  → Solace PubSub+ broker (SMF)&#xa;:7233   → Temporal gRPC&#xa;:5432–5436, :5440 → PostgreSQL DBs" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=9;fontFamily=monospace;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="480" y="906" width="330" height="215" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
