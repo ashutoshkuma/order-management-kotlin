@@ -28,6 +28,19 @@ import org.springframework.web.client.RestClient
  * (insufficient funds, card declined). We translate those to
  * InsufficientFundsException / CardDeclinedException so Temporal's
  * doNotRetry policy kicks in correctly.
+ *
+ * CIRCUIT BREAKER:
+ * Wraps the RestClient call (see `circuitBreaker.executeSupplier` below).
+ * This is not redundant with Temporal's retry: Temporal's retry is
+ * per-order — it keeps giving *this* order's activity another attempt.
+ * The breaker is shared across every order's activity invocations in
+ * this worker process, so once payment-service starts failing or
+ * running slow (`slow-call-duration-threshold` in application.yml), it
+ * trips open and fails fast for all of them instead of letting every
+ * concurrent order's retry pile up blocked HTTP calls against an
+ * already-struggling dependency. `ignore-exceptions` in application.yml
+ * keeps the 422 cases above out of the breaker's failure count — those
+ * are business rejections, not infrastructure degradation.
  */
 @Component
 @ActivityImpl(taskQueues = ["ORDER_FULFILLMENT_QUEUE"])

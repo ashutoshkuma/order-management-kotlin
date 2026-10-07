@@ -26,6 +26,17 @@ import org.springframework.web.client.RestClient
  * In production this would wait for a carrier webhook signal.
  * The shipping-service exposes POST /deliveries/{shipmentId}/confirm
  * which simulates the carrier callback.
+ *
+ * CIRCUIT BREAKER:
+ * Wraps the RestClient call (see `circuitBreaker.executeSupplier` below).
+ * This is not redundant with Temporal's retry: Temporal's retry is
+ * per-order — it keeps giving *this* order's activity another attempt.
+ * The breaker is shared across every order's activity invocations in
+ * this worker process, so once shipping-service starts failing or
+ * running slow (`slow-call-duration-threshold` in application.yml), it
+ * trips open and fails fast for all of them instead of letting every
+ * concurrent order's retry pile up blocked HTTP calls against an
+ * already-struggling dependency.
  */
 @Component
 @ActivityImpl(taskQueues = ["ORDER_FULFILLMENT_QUEUE"])
