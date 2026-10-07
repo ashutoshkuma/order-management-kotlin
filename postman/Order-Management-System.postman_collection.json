@@ -9,7 +9,7 @@
     { "key": "inventory_service", "value": "http://localhost:8081" },
     { "key": "payment_service",   "value": "http://localhost:8082" },
     { "key": "shipping_service",  "value": "http://localhost:8083" },
-    { "key": "kong_gateway",      "value": "http://localhost:8000" },
+    { "key": "kong_gateway",      "value": "http://localhost:8100" },
     { "key": "order_id",          "value": "" },
     { "key": "workflow_id",       "value": "" },
     { "key": "reservation_id",    "value": "" },
