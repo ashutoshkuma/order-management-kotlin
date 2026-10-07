@@ -120,15 +120,25 @@ class OrderFulfillmentWorkflowImpl : OrderFulfillmentWorkflow {
     }
 
     private fun executeStep(step: WorkflowStep, orderId: String) {
+        val retryOptions = RetryOptions.newBuilder()
+            .setMaximumAttempts(step.maxAttempts)
+            .setInitialInterval(Duration.ofSeconds(1))
+            .setBackoffCoefficient(2.0)
+
+        // Insufficient funds / card declined are deterministic business rejections —
+        // retrying the same charge won't change the outcome, so exclude them from
+        // Temporal's activity-level retry rather than burning an attempt (and its
+        // backoff delay) before isPaymentRetryable() below reaches the same verdict.
+        if (step.name == "PROCESS_PAYMENT") {
+            retryOptions.setDoNotRetry(
+                InsufficientFundsException::class.java.name,
+                CardDeclinedException::class.java.name,
+            )
+        }
+
         val options = ActivityOptions.newBuilder()
             .setStartToCloseTimeout(Duration.ofSeconds(step.timeoutSeconds.toLong()))
-            .setRetryOptions(
-                RetryOptions.newBuilder()
-                    .setMaximumAttempts(step.maxAttempts)
-                    .setInitialInterval(Duration.ofSeconds(1))
-                    .setBackoffCoefficient(2.0)
-                    .build()
-            )
+            .setRetryOptions(retryOptions.build())
             .build()
 
         when (step.name) {
