@@ -33,8 +33,15 @@ import org.springframework.web.client.RestClient
  * (which we pass as the orderId — deterministic per order).
  *
  * CIRCUIT BREAKER:
- * In production, wrap RestClient calls with Resilience4j circuit breaker.
- * Not added here to keep the demo focused on Temporal + Event Sourcing.
+ * Wraps the RestClient call (see `circuitBreaker.executeSupplier` below).
+ * This is not redundant with Temporal's retry: Temporal's retry is
+ * per-order — it keeps giving *this* order's activity another attempt.
+ * The breaker is shared across every order's activity invocations in
+ * this worker process, so once inventory-service starts failing or
+ * running slow (`slow-call-duration-threshold` in application.yml), it
+ * trips open and fails fast for all of them instead of letting every
+ * concurrent order's retry pile up blocked HTTP calls against an
+ * already-struggling dependency.
  */
 @Component
 @ActivityImpl(taskQueues = ["ORDER_FULFILLMENT_QUEUE"])
