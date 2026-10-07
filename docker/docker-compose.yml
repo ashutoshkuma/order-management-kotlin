@@ -1,6 +1,9 @@
 # ════════════════════════════════════════════════════════════════════════
 # Order Management — Full Stack
 # Run from project root:  docker compose -f docker/docker-compose.yml up -d
+#
+# Temporal runs on Temporal Cloud, not self-hosted — set TEMPORAL_SERVICE_ADDRESS,
+# TEMPORAL_NAMESPACE, and TEMPORAL_API_KEY (see docker/.env.example) before starting.
 # ════════════════════════════════════════════════════════════════════════
 
 networks:
@@ -9,7 +12,6 @@ networks:
 
 volumes:
   postgres-order-data:
-  postgres-temporal-data:
   postgres-inventory-data:
   postgres-payment-data:
   postgres-shipping-data:
@@ -89,22 +91,6 @@ services:
       timeout: 5s
       retries: 10
 
-  postgres-temporal:
-    image: postgres:16-alpine
-    container_name: postgres-temporal
-    environment:
-      POSTGRES_DB: temporal
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporal
-    ports: ["5433:5432"]
-    volumes: [postgres-temporal-data:/var/lib/postgresql/data]
-    networks: [order-net]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
@@ -124,7 +110,6 @@ services:
       - postgres-inventory
       - postgres-payment
       - postgres-shipping
-      - postgres-temporal
     restart: unless-stopped
 
   # ──────────────────────────────────────────────
@@ -160,36 +145,11 @@ services:
       start_period: 30s
 
   # ──────────────────────────────────────────────
-  # TEMPORAL
+  # TEMPORAL — Temporal Cloud (not self-hosted)
+  # Workflow visualizer: https://cloud.temporal.io (your namespace's UI)
+  # Connection details come from the order-service environment below,
+  # sourced from docker/.env — see docker/.env.example.
   # ──────────────────────────────────────────────
-
-  temporal:
-    image: temporalio/auto-setup:1.22.3
-    container_name: temporal-server
-    depends_on:
-      postgres-temporal:
-        condition: service_healthy
-    environment:
-      - DB=postgresql
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgres-temporal
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - ENABLE_ES=false
-    volumes:
-      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
-    ports: ["7233:7233"]
-    networks: [order-net]
-
-  temporal-ui:
-    image: temporalio/ui:2.26.2
-    container_name: temporal-ui
-    depends_on: [temporal]
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-    ports: ["8088:8080"]
-    networks: [order-net]
 
   # ──────────────────────────────────────────────
   # MICROSERVICES  (pre-built JARs via Dockerfile)
@@ -344,8 +304,6 @@ services:
     depends_on:
       postgres-order:
         condition: service_healthy
-      temporal:
-        condition: service_started
       solace:
         condition: service_healthy
       inventory-service:
@@ -362,7 +320,10 @@ services:
       SOLACE_JMS_MSG_VPN: default
       SOLACE_JMS_CLIENT_USERNAME: default
       SOLACE_JMS_CLIENT_PASSWORD: default
-      TEMPORAL_SERVICE_ADDRESS: temporal:7233
+      # Temporal Cloud — see docker/.env.example
+      TEMPORAL_SERVICE_ADDRESS: ${TEMPORAL_SERVICE_ADDRESS}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE}
+      TEMPORAL_API_KEY: ${TEMPORAL_API_KEY}
       SERVICES_INVENTORY_URL: http://inventory-service:8081
       SERVICES_PAYMENT_URL: http://payment-service:8082
       SERVICES_SHIPPING_URL: http://shipping-service:8083

@@ -41,15 +41,15 @@ A production-quality learning project demonstrating how enterprise patterns work
        ▼                   ▼       ▼           ▼                    ▼
  order-service:8080  inventory:8081  payment:8082  shipping:8083  notification:8084
        │                   │              │              │              │
-       │ gRPC :7233        └──────────────┴──────────────┴──────────────┘
+       │ gRPC/TLS          └──────────────┴──────────────┴──────────────┘
        ▼                                  │
-┌─────────────────┐              ┌──────────────────┐        ┌───────┐
-│ Temporal Server  │              │ Solace PubSub+   │        │ Redis │
-│ OrderFulfillment │              │  order.events    │        │ (dedup)│
-│ Workflow (Saga)  │              │  payment.events  │        └───────┘
-└─────────────────┘               │  inventory.events│
-                                   │  shipping.events │
-                                   └──────────────────┘
+┌───────────────────┐            ┌──────────────────┐        ┌───────┐
+│  Temporal Cloud    │            │ Solace PubSub+   │        │ Redis │
+│  (hosted, your     │            │  order.events    │        │ (dedup)│
+│   namespace)        │            │  payment.events  │        └───────┘
+│  OrderFulfillment   │            │  inventory.events│
+│  Workflow (Saga)    │            │  shipping.events │
+└───────────────────┘             └──────────────────┘
 ```
 
 Each of the five services is a separate Spring Boot application with its own PostgreSQL database (except `notification-service`, which is stateless + Redis-backed). `order-service` owns the Temporal workflow and calls the other four services' REST APIs synchronously from Temporal activities; each service also publishes its domain events asynchronously to Solace via the outbox pattern, which `notification-service` consumes.
@@ -62,7 +62,7 @@ Each of the five services is a separate Spring Boot application with its own Pos
 |----------|-----------|
 | Language | Kotlin 2.0.21 (JVM 21 target) |
 | Framework | Spring Boot 3.2.5 |
-| Workflow Orchestration | Temporal Java SDK 1.25.2 |
+| Workflow Orchestration | Temporal Java SDK 1.25.2, connecting to **Temporal Cloud** (not self-hosted) |
 | Persistence | Spring Data JDBC + PostgreSQL 16 (one DB per service) |
 | Schema Migration | Flyway |
 | Message Broker | Solace PubSub+ (JMS) |
@@ -73,7 +73,7 @@ Each of the five services is a separate Spring Boot application with its own Pos
 | Idempotency store | Redis 7 (`notification-service`) |
 | Testing | JUnit 5 + Testcontainers + Temporal `TestWorkflowEnvironment` |
 | Build | Maven multi-module (6 modules) |
-| Containers | Docker Compose (21 services) |
+| Containers | Docker Compose (20 services — Temporal itself runs on Temporal Cloud) |
 
 ---
 
@@ -178,7 +178,8 @@ Each step between activities (and each outbox relay sweep) is artificially slowe
 
 - **JDK 21**, available at a known path (not just whatever `java` resolves to — see the gotcha below)
 - **Maven 3.9+**
-- **Docker Desktop**, running, with enough resources for ~21 containers (5 services, 5 Postgres, Temporal + UI, Kong + its Postgres, Solace, Redis, Prometheus, Grafana, Jaeger, Swagger UI, pgAdmin)
+- **Docker Desktop**, running, with enough resources for ~20 containers (5 services, 4 Postgres, Kong + its Postgres, Solace, Redis, Prometheus, Grafana, Jaeger, Swagger UI, pgAdmin)
+- **A Temporal Cloud namespace** — workflow orchestration runs on Temporal Cloud, not a local container. You need a namespace, its gRPC endpoint, and an API key (Temporal Cloud UI → your namespace → API Keys).
 
 > **Gotcha:** the Kotlin 2.0.21 compiler can't parse the JDK version string on newer JDK builds (e.g. JDK 25) and fails with `IllegalArgumentException: 25.0.2`. Point `JAVA_HOME` at an actual JDK 21 install when building, even if a newer JDK is your shell default:
 > ```bash
@@ -187,6 +188,18 @@ Each step between activities (and each outbox relay sweep) is artificially slowe
 > export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 > export PATH="$JAVA_HOME/bin:$PATH"
 > ```
+
+### 0. Configure Temporal Cloud credentials
+
+```bash
+cp docker/.env.example docker/.env
+# then edit docker/.env and fill in:
+#   TEMPORAL_SERVICE_ADDRESS=<namespace>.tmprl.cloud:7233
+#   TEMPORAL_NAMESPACE=<namespace>
+#   TEMPORAL_API_KEY=<api key>
+```
+
+`docker/.env` is gitignored — never commit it. `order-service` reads these at startup; a non-blank `TEMPORAL_API_KEY` is what switches its Temporal client into TLS + API-key mode (see `TemporalConfig.kt`). Without a namespace of your own, create one for free at https://cloud.temporal.io.
 
 ### 1. Build all modules
 
@@ -203,7 +216,7 @@ cd docker
 docker compose up -d --build
 ```
 
-First run builds all five service images (fast — they just layer the already-built JAR) and starts everything: databases, Temporal, Solace, Kong, Redis, the observability stack, and the five services in dependency order.
+First run builds all five service images (fast — they just layer the already-built JAR) and starts everything: databases, Solace, Kong, Redis, the observability stack, and the five services in dependency order. `order-service` connects out to Temporal Cloud using the credentials from `docker/.env` — there's no local Temporal container to wait on.
 
 Check status:
 
@@ -239,7 +252,7 @@ docker compose down -v       # also wipe all database/queue data
 | http://localhost:8084 | notification-service |
 | http://localhost:8080/swagger-ui.html (and `:8081`–`:8084`) | Swagger UI per service |
 | http://localhost:8089 | **Aggregated Swagger UI** — all five APIs in one place |
-| http://localhost:8088 | **Temporal UI** — workflow visualizer |
+| https://cloud.temporal.io | **Temporal Cloud UI** — workflow visualizer, on your namespace (no local port) |
 | http://localhost:8100 | Kong proxy (routes to all services) |
 | http://localhost:8001 / :8002 | Kong Admin API / Kong Manager UI |
 | http://localhost:5050 | pgAdmin (`admin@admin.com` / `admin`) — all 5 Postgres instances pre-registered |
@@ -296,7 +309,7 @@ watch -n2 "curl -s http://localhost:8080/orders/\$ORDER_ID | python3 -m json.too
 curl -s http://localhost:8080/orders/$ORDER_ID/timeline | python3 -m json.tool
 ```
 
-A full run takes roughly 30–60 seconds and ends either `DELIVERED` (happy path) or `CANCELLED` (see below) — watch it unfold live in the Temporal UI at http://localhost:8088.
+A full run takes roughly 30–60 seconds and ends either `DELIVERED` (happy path) or `CANCELLED` (see below) — watch it unfold live in your namespace's Temporal Cloud UI.
 
 ### Simulated failures (saga compensation)
 
@@ -390,7 +403,7 @@ Each service owns its own data and its own failure domain. The outbox pattern (w
 
 | Tool | URL | What for |
 |---|---|---|
-| Temporal UI | :8088 | Per-workflow execution history, retries, signals |
+| Temporal Cloud UI | cloud.temporal.io | Per-workflow execution history, retries, signals |
 | Prometheus | :9090 | Raw metrics (`orders.created`, `payments.failed`, JVM/HTTP metrics, etc.) |
 | Grafana | :3000 | Dashboards on top of Prometheus |
 | Jaeger | :16686 | Distributed traces across all five services (OTLP) |

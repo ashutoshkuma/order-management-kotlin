@@ -90,7 +90,8 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class TemporalConfig(
     @Value("\${temporal.service-address:localhost:7233}") private val temporalServiceAddress: String,
-    @Value("\${temporal.namespace:default}") private val namespace: String
+    @Value("\${temporal.namespace:default}") private val namespace: String,
+    @Value("\${temporal.api-key:}") private val apiKey: String,
 ) {
 
     /**
@@ -109,15 +110,29 @@ class TemporalConfig(
 
     /**
      * gRPC stub to the Temporal server.
-     * In production: use TLS, health checks, and connection pooling.
+     *
+     * Self-hosted (default): plain-text target, e.g. `localhost:7233`.
+     *
+     * Temporal Cloud: set `temporal.api-key` (env `TEMPORAL_API_KEY`) and
+     * point `temporal.service-address` at the namespace's gRPC endpoint
+     * (`<namespace>.tmprl.cloud:7233`). Presence of an API key is what
+     * switches this bean into Cloud mode — it enables TLS and attaches the
+     * key as a gRPC `authorization` header via `addApiKey` (verbatim, no
+     * "Bearer " prefix: Temporal Cloud's gRPC endpoint expects the raw key).
      */
     @Bean
-    fun workflowServiceStubs(): WorkflowServiceStubs =
-        WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder()
-                .setTarget(temporalServiceAddress)
-                .build()
-        )
+    fun workflowServiceStubs(): WorkflowServiceStubs {
+        val optionsBuilder = WorkflowServiceStubsOptions.newBuilder()
+            .setTarget(temporalServiceAddress)
+
+        if (apiKey.isNotBlank()) {
+            optionsBuilder
+                .setEnableHttps(true)
+                .addApiKey { apiKey }
+        }
+
+        return WorkflowServiceStubs.newServiceStubs(optionsBuilder.build())
+    }
 
     /**
      * Temporal WorkflowClient.

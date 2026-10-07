@@ -43,9 +43,15 @@ services:
     url: http://localhost:8083
 
 # ─── Temporal ──────────────────────────────────────────────────────────
+# Self-hosted by default. For Temporal Cloud, override via env vars:
+#   TEMPORAL_SERVICE_ADDRESS=<namespace>.tmprl.cloud:7233
+#   TEMPORAL_NAMESPACE=<namespace>
+#   TEMPORAL_API_KEY=<api key>
+# (a non-blank api-key switches TemporalConfig.kt into TLS + API-key mode)
 temporal:
   service-address: localhost:7233
   namespace: default
+  api-key: ""
   connection:
     target: ${temporal.service-address}
   workers-auto-discovery:
